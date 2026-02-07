@@ -32,7 +32,7 @@ export const useVerifyOtp = (options?: UseVerifyOtpOptions) => {
   return useMutation({
     mutationFn: verifyOtp,
     onSuccess: (data) => {
-      if (data.errorCode === 'SUCCESS' || data.statusCode === 200) {
+      if (data.success) {
         toast.success('Verification Successful!', {
           description: data.message || 'Your email has been verified successfully.',
         });

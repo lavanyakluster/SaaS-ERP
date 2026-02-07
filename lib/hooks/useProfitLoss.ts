@@ -106,7 +106,10 @@ export const useProfitLoss = (
  * console.log(totals.totalProfit); // 19004
  * console.log(totals.profitMargin); // 45.89%
  */
-export const useProfitLossWithTotals = (params: ProfitLossRequest, enabled = true) => {
+export const useProfitLossWithTotals = (
+  params: Omit<ProfitLossRequest, 'year'>,
+  enabled = true
+) => {
   const query = useProfitLoss(params, enabled);
 
   const totals = useMemo(() => {

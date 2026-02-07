@@ -22,7 +22,6 @@ import {
   type AccountAutocompleteItem,
   type AccountMasterDetails,
   type GroupMasterDetails,
-  UpdateAccountMasterData,
 } from '@/lib/api/account-master.api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/lib/store/auth-store';

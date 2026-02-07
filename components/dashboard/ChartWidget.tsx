@@ -305,8 +305,10 @@ export function ChartWidget({
 
       {/* Hover Border Animation */}
       <div className={`absolute inset-0 rounded-xl transition-all duration-300 pointer-events-none ${
-        isHovered ? 'ring-2 ring-blue-500/50 ring-offset-2' : ''
-      }`} style={{ ringOffsetColor: isDark ? '#1f2937' : '#ffffff' }} />
+        isHovered
+          ? `ring-2 ring-blue-500/50 ring-offset-2 ${isDark ? 'ring-offset-gray-800' : 'ring-offset-white'}`
+          : ''
+      }`} />
     </div>
   );
 }

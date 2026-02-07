@@ -10,7 +10,8 @@ import { useSendOtp, useVerifyOtp } from '@/lib/hooks';
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const theme = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   const [mounted, setMounted] = useState(false);
 
   const email = searchParams.get('email') || '';
@@ -129,7 +130,7 @@ export default function VerifyEmailPage() {
     }
 
     setError('');
-    verifyOtp({ Email: email, OTP: otpCode });
+    verifyOtp({ Email: email, Otp: otpCode });
   }, [email, otp, verifyOtp]);
 
   const handleResend = useCallback(() => {
@@ -156,32 +157,32 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <ModernLoginLayout theme={theme}>
+    <ModernLoginLayout theme={themeMode}>
       <div className="space-y-6">
         {/* Header */}
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 mb-5">
             <Sparkles className="w-4 h-4 text-emerald-500" />
             <span className={`text-xs font-semibold ${
-              theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
+              isDark ? 'text-emerald-400' : 'text-emerald-600'
             }`}>
               EMAIL VERIFICATION
             </span>
           </div>
           
           <h1 className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDark ? 'text-white' : 'text-gray-900'
           }`}>
             Verify Your Email
           </h1>
           
           <p className={`${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
             We&apos;ve sent a 6-digit verification code to
           </p>
           <p className={`font-semibold ${
-            theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
+            isDark ? 'text-emerald-400' : 'text-emerald-600'
           }`}>
             {email}
           </p>
@@ -193,12 +194,12 @@ export default function VerifyEmailPage() {
             <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
             <div>
               <p className={`font-semibold ${
-                theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
+                isDark ? 'text-emerald-400' : 'text-emerald-600'
               }`}>
                 Email verified successfully!
               </p>
               <p className={`text-sm ${
-                theme === 'dark' ? 'text-emerald-300/70' : 'text-emerald-600/70'
+                isDark ? 'text-emerald-300/70' : 'text-emerald-600/70'
               }`}>
                 Redirecting to login...
               </p>
@@ -210,7 +211,7 @@ export default function VerifyEmailPage() {
         {error && (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
             <p className={`text-sm ${
-              theme === 'dark' ? 'text-red-400' : 'text-red-600'
+              isDark ? 'text-red-400' : 'text-red-600'
             }`}>
               {error}
             </p>
@@ -236,7 +237,7 @@ export default function VerifyEmailPage() {
                 className={`
                   w-14 h-16 text-center text-2xl font-bold rounded-xl
                   border-2 transition-all duration-200
-                  ${theme === 'dark'
+                  ${isDark
                     ? 'bg-gray-800 text-white border-gray-700 focus:border-emerald-500'
                     : 'bg-white text-gray-900 border-gray-300 focus:border-emerald-500'
                   }
@@ -259,7 +260,7 @@ export default function VerifyEmailPage() {
               w-full py-3.5 px-6 rounded-xl font-semibold
               transition-all duration-200
               flex items-center justify-center gap-2
-              ${theme === 'dark'
+              ${isDark
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-lg hover:shadow-emerald-500/25'
                 : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-lg hover:shadow-emerald-600/25'
               }
@@ -289,7 +290,7 @@ export default function VerifyEmailPage() {
         {/* Resend Code */}
         <div className="text-center space-y-3">
           <p className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
             Didn&apos;t receive the code?
           </p>
@@ -301,7 +302,7 @@ export default function VerifyEmailPage() {
             className={`
               inline-flex items-center gap-2 px-4 py-2 rounded-lg
               font-semibold text-sm transition-all duration-200
-              ${theme === 'dark'
+              ${isDark
                 ? 'text-emerald-400 hover:bg-emerald-500/10'
                 : 'text-emerald-600 hover:bg-emerald-500/10'
               }
@@ -321,7 +322,7 @@ export default function VerifyEmailPage() {
 
         {/* Help Text */}
         <div className={`text-center text-sm ${
-          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+          isDark ? 'text-gray-500' : 'text-gray-500'
         }`}>
           <p>Check your spam folder if you don&apos;t see the email.</p>
           <p className="mt-1">The code will expire in 10 minutes.</p>

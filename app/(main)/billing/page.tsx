@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Package, Zap, Shield, DollarSign, Calendar, TrendingUp, CreditCard, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useTheme } from '@/lib/store/theme-store';
+import type { BillingHistory } from '@/lib/api/subscription.api';
 import { GRADIENTS, ICON_GRADIENTS } from '@/lib/constants/colors';
 import {
   BillingStats,
@@ -19,7 +20,8 @@ import {
 } from '@/lib/hooks/useSubscription';
 
 export default function BillingPage() {
-  const theme = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
@@ -131,32 +133,56 @@ export default function BillingPage() {
   // ============================================================================
 
   // Use API data if available, otherwise use mock data
-  const billingHistory = billingHistoryData || [
+  const fallbackBillingHistory: BillingHistory[] = [
     {
-      id: '1',
+      invoiceId: '1',
+      invoiceNumber: 'INV-0001',
       date: '2024-01-01',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
       invoiceUrl: '#',
     },
     {
-      id: '2',
+      invoiceId: '2',
+      invoiceNumber: 'INV-0002',
       date: '2023-12-01',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
       invoiceUrl: '#',
     },
     {
-      id: '3',
+      invoiceId: '3',
+      invoiceNumber: 'INV-0003',
       date: '2023-11-01',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
       invoiceUrl: '#',
     },
   ];
+
+  const billingHistory = billingHistoryData ?? fallbackBillingHistory;
+
+  const invoices: {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+    status: 'paid' | 'pending';
+    invoiceUrl: string;
+  }[] = billingHistory.map((invoice) => ({
+    id: invoice.invoiceNumber || invoice.invoiceId,
+    date: invoice.date,
+    description: invoice.description,
+    amount: invoice.amount,
+    status: invoice.status === 'paid' ? 'paid' : 'pending',
+    invoiceUrl: invoice.invoiceUrl ?? '#',
+  }));
 
   // Stats with unified colors
   const stats = [
@@ -229,9 +255,9 @@ export default function BillingPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-            theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'
+            isDark ? 'text-emerald-500' : 'text-emerald-600'
           }`} />
-          <p className={`text-lg ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Loading billing information...
           </p>
         </div>
@@ -248,16 +274,16 @@ export default function BillingPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
           <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-            theme === 'dark' ? 'bg-red-500/10' : 'bg-red-50'
+            isDark ? 'bg-red-500/10' : 'bg-red-50'
           }`}>
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
           <h2 className={`text-xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDark ? 'text-white' : 'text-gray-900'
           }`}>
             Unable to Load Billing Information
           </h2>
-          <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             We're having trouble loading your billing information. Please try again later.
           </p>
           <button
@@ -288,29 +314,29 @@ export default function BillingPage() {
         <div>
           <h1
             className={`text-3xl font-bold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDark ? 'text-white' : 'text-gray-900'
             }`}
           >
             Billing & Subscription
           </h1>
-          <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Manage your subscription, payment methods, and billing history
           </p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <BillingStats stats={stats} theme={theme} />
+      <BillingStats stats={stats} theme={themeMode} />
 
       {/* Current Plan */}
-      {currentPlan && <CurrentPlanCard plan={currentPlan} theme={theme} />}
+      {currentPlan && <CurrentPlanCard plan={currentPlan} theme={themeMode} />}
 
       {/* Available Plans */}
       <AvailablePlansGrid
         plans={plans}
         selectedPlan={currentPlan.name}
         onSelectPlan={handleSelectPlan}
-        theme={theme}
+        theme={themeMode}
       />
 
       {/* Payment Methods */}
@@ -318,14 +344,14 @@ export default function BillingPage() {
         paymentMethods={paymentMethods}
         onAddMethod={handleAddPaymentMethod}
         onEditMethod={handleEditPaymentMethod}
-        theme={theme}
+        theme={themeMode}
       />
 
       {/* Billing History */}
       <BillingHistoryTable
-        invoices={billingHistory}
+        invoices={invoices}
         onDownload={handleDownloadInvoice}
-        theme={theme}
+        theme={themeMode}
       />
 
       {/* Subscription Modal */}
@@ -336,7 +362,7 @@ export default function BillingPage() {
             setIsSubscriptionModalOpen(false);
             setSelectedPlan(null);
           }}
-          isDark={theme === 'dark'}
+          isDark={isDark}
           plan={selectedPlan}
           currentSubscriptionId={currentSubscription?.subscriptionId}
           isUpgrade={!!currentSubscription}

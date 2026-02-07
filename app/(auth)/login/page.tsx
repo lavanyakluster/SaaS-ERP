@@ -1,6 +1,6 @@
 'use client';
 
-import { useLogin, useMicrosoftAuth, useGoogleOneTap } from '@/lib/hooks';
+import { useLogin, useMicrosoftAuth } from '@/lib/hooks';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -26,7 +26,8 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   
   // ✅ PERFORMANCE: Use theme store correctly
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   
   // 🐛 DEBUG: Track component renders
   if (process.env.NODE_ENV === 'development') {
@@ -40,11 +41,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
-  const [socialLoading, setSocialLoading] = useState<'google' | 'microsoft' | null>(null);
+  const [socialLoading, setSocialLoading] = useState<'microsoft' | null>(null);
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
 
   // Helper function to handle successful login redirection
-  const handleLoginSuccess = useCallback((data: { isNewUser: boolean; emailVerified?: boolean }) => {
+  const handleLoginSuccess = useCallback((data: { isNewUser?: boolean; emailVerified?: boolean }) => {
     console.log('🔄 handleLoginSuccess called:', data);
     
     // ✅ Status and cookie are ALREADY set in useLogin hook - just handle routing
@@ -114,19 +115,6 @@ export default function LoginPage() {
     },
   });
 
-  // Google One Tap hook - TEMPORARILY DISABLED to debug infinite loop
-  // const googleOneTap = useGoogleOneTap({
-  //   onSuccess: (data) => {
-  //     setSocialLoading(null);
-  //     handleLoginSuccess(data);
-  //   },
-  //   onError: (error: any) => {
-  //     setSocialLoading(null);
-  //     const errorMessage = error?.response?.data?.message || error?.message || 'Google login failed';
-  //     setErrors({ general: errorMessage });
-  //   },
-  // });
-
   // Check for email verification success message and clean up storage on mount
   useEffect(() => {
     setMounted(true);
@@ -183,19 +171,19 @@ export default function LoginPage() {
   }
 
   return (
-    <ModernLoginLayout theme={theme}>
+    <ModernLoginLayout theme={themeMode}>
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <SecureBadge theme={theme} />
+          <SecureBadge theme={themeMode} />
           
           <h1 className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDark ? 'text-white' : 'text-gray-900'
           }`}>
             Sign in
           </h1>
           <p className={`${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
             Continue to your SmartBook account
           </p>
@@ -206,7 +194,7 @@ export default function LoginPage() {
           <AlertMessage 
             type="error" 
             message={errors.general}
-            theme={theme}
+            theme={themeMode}
           />
         )}
 
@@ -216,7 +204,7 @@ export default function LoginPage() {
             type="success"
             title="Email verified successfully!"
             message="Please sign in to set up your organization"
-            theme={theme}
+            theme={themeMode}
           />
         )}
 
@@ -232,7 +220,7 @@ export default function LoginPage() {
             disabled={loginMutation.isPending}
             error={errors.email}
             icon={<User className="w-5 h-5" />}
-            theme={theme}
+            theme={themeMode}
           />
 
           {/* Password */}
@@ -243,7 +231,7 @@ export default function LoginPage() {
             placeholder="••••••••"
             disabled={loginMutation.isPending}
             error={errors.password}
-            theme={theme}
+            theme={themeMode}
           />
 
           {/* Forgot Password */}
@@ -268,21 +256,13 @@ export default function LoginPage() {
         </form>
 
         {/* Divider */}
-        <FormDivider theme={theme} />
+        <FormDivider theme={themeMode} />
 
         {/* Social Login */}
         <SocialAuthButtons
-          theme={theme}
+          theme={themeMode}
           disabled={loginMutation.isPending}
-          isLoading={socialLoading}
           microsoftLoading={microsoftAuth.isLoading}
-          onGoogleSuccess={() => {
-            setSocialLoading(null);
-          }}
-          onGoogleError={(error) => {
-            setSocialLoading(null);
-            setErrors({ general: error?.message || 'Google login failed' });
-          }}
           onMicrosoftClick={() => {
             setSocialLoading('microsoft');
             setErrors({});
@@ -293,7 +273,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center">
           <p className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
             Don't have an account?{' '}
             <Link href="/signup" className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">

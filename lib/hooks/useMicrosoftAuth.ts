@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useSocialLogin } from './useSocialLogin';
 import { signInWithMicrosoftPopup } from '@/lib/auth/microsoft-auth.service';
+import { isMicrosoftAuthConfigured } from '@/lib/auth/microsoft-auth.config';
 import { toast } from 'sonner';
-import { SocialLoginResponse } from '@/lib/api';
+import type { LoginResponse } from '@/lib/api';
 
 interface UseMicrosoftAuthOptions {
-  onSuccess?: (data: SocialLoginResponse) => void;
+  onSuccess?: (data: LoginResponse) => void;
   onError?: (error: any) => void;
 }
 
@@ -13,6 +14,7 @@ export const useMicrosoftAuth = (options?: UseMicrosoftAuthOptions) => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { mutateAsync: socialLogin } = useSocialLogin({
+    provider: 'microsoft',
     onSuccess: (data) => {
       setIsLoading(false);
       options?.onSuccess?.(data);
@@ -25,6 +27,9 @@ export const useMicrosoftAuth = (options?: UseMicrosoftAuthOptions) => {
 
   const loginWithMicrosoft = async () => {
     try {
+      if (!isMicrosoftAuthConfigured()) {
+        throw new Error('Microsoft authentication is not configured. Set NEXT_PUBLIC_MICROSOFT_CLIENT_ID and NEXT_PUBLIC_MICROSOFT_REDIRECT_URI.');
+      }
       setIsLoading(true);
       const result = await signInWithMicrosoftPopup();
       
@@ -34,7 +39,7 @@ export const useMicrosoftAuth = (options?: UseMicrosoftAuthOptions) => {
 
       await socialLogin({
         Provider: 'Microsoft',
-        IdToken: result.idToken
+        IdToken: result.idToken,
       });
       
     } catch (error: any) {

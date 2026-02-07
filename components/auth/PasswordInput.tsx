@@ -9,7 +9,7 @@ import { useState, InputHTMLAttributes } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
 interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'> {
-  label: string;
+  label?: string;
   error?: string;
   theme?: 'light' | 'dark';
   showStrength?: boolean;
@@ -44,11 +44,13 @@ export function PasswordInput({
 
   return (
     <div>
-      <label className={`block text-sm font-semibold mb-2 ${
-        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-      }`}>
-        {label}
-      </label>
+      {label && (
+        <label className={`block text-sm font-semibold mb-2 ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+        }`}>
+          {label}
+        </label>
+      )}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
           <Lock className={`w-5 h-5 ${

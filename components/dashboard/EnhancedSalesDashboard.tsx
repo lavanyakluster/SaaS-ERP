@@ -373,7 +373,10 @@ export function EnhancedSalesDashboard({
                       <LabelList 
                         dataKey="sales" 
                         position="top" 
-                        formatter={(value: number) => formatCurrency(value)}
+                        formatter={(value?: any) => {
+                          if (value === undefined || value === null) return '';
+                          return formatCurrency(Number(value));
+                        }}
                         style={{ 
                           fontSize: '10px', 
                           fill: isDark ? '#9CA3AF' : '#6B7280',

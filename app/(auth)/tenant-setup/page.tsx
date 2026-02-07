@@ -75,7 +75,8 @@ const COUNTRY_OPTIONS = [
 
 function TenantSetupContent() {
   const router = useRouter();
-  const theme = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   
   // Form state
   const [mounted, setMounted] = useState(false);
@@ -106,24 +107,8 @@ function TenantSetupContent() {
         const currentRefreshToken = useAuthStore.getState().tokens?.refreshToken;
         
         if (currentRefreshToken) {
-          try {
-            // Refresh tokens to get new token with organizationId
-            const { refreshToken } = await import('@/lib/api/auth.api');
-            const refreshResponse = await refreshToken({ refreshToken: currentRefreshToken });
-            
-            console.log('🔄 Token refreshed successfully!');
-            console.log('🎫 New token preview:', refreshResponse.access_token.substring(0, 50) + '...');
-            
-            // Update tokens in store
-            useAuthStore.getState().setTokens(
-              refreshResponse.access_token,
-              refreshResponse.refresh_token,
-              refreshResponse.expires_in
-            );
-          } catch (refreshError) {
-            console.error('❌ Token refresh failed:', refreshError);
-            // Continue anyway - user can still access the app
-          }
+          // Refresh-token API removed. Continue without manual refresh.
+          console.log('⚠️ Refresh-token API removed; skipping manual refresh.');
         }
       } else {
         console.log('✅ New tokens received from backend');
@@ -297,8 +282,6 @@ function TenantSetupContent() {
     return null;
   }
 
-  const isDark = theme === 'dark';
-
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${
       isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
@@ -312,7 +295,7 @@ function TenantSetupContent() {
             showText={true}
             title="SmartBook ERP"
             subtitle="Let's set up your workspace"
-            theme={theme}
+            theme={themeMode}
           />
         </div>
 

@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import { Search, Eye, Edit, Trash2, Plus, Building2, FileText, ChevronDown, Loader2 } from 'lucide-react';
 import { MODULE_PERMISSIONS } from '@/config/permissions';
-import { DEFAULT_LEDGERS } from '@/config/ledgers';
 import { useBranches } from '@/lib/hooks';
 import { VirtualBranchList } from './VirtualBranchList';
-import { VirtualLedgerList } from './VirtualLedgerList';
 
 type CrudPermission = {
   add: boolean;
@@ -18,32 +16,25 @@ type CrudPermission = {
 interface PermissionsPanelProps {
   modulePermissions: Record<string, CrudPermission>;
   selectedBranches: string[];
-  selectedLedgers: string[];
   onModulePermissionToggle: (moduleId: string, permission: keyof CrudPermission) => void;
   onModuleSelectAll: (moduleId: string) => void;
   onSelectAllModules: () => void;
   onBranchToggle: (branchId: string) => void;
   onSelectAllBranches: (filteredBranchIds: string[]) => void;
-  // onLedgerToggle: (ledgerId: string) => void;
-  // onSelectAllLedgers: (filteredLedgerIds: string[]) => void;
   isDark: boolean;
 }
 
 export function PermissionsPanel({
   modulePermissions,
   selectedBranches,
-  selectedLedgers,
   onModulePermissionToggle,
   onModuleSelectAll,
   onSelectAllModules,
   onBranchToggle,
   onSelectAllBranches,
-  // onLedgerToggle,
-  // onSelectAllLedgers,
   isDark,
 }: PermissionsPanelProps) {
   const [branchSearch, setBranchSearch] = useState('');
-  const [ledgerSearch, setLedgerSearch] = useState('');
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   // ✅ Fetch real branches from API
@@ -61,17 +52,8 @@ export function PermissionsPanel({
     branch.id.toLowerCase().includes(branchSearch.toLowerCase())
   );
 
-  const filteredLedgers = DEFAULT_LEDGERS.filter(ledger =>
-    ledger.name.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
-    ledger.code.toLowerCase().includes(ledgerSearch.toLowerCase())
-  );
-
   const handleSelectAllBranches = () => {
     onSelectAllBranches(filteredBranches.map(b => b.id));
-  };
-
-  const handleSelectAllLedgers = () => {
-    onSelectAllLedgers(filteredLedgers.map(l => l.id));
   };
 
   const toggleMenu = (menuId: string) => {
@@ -338,7 +320,7 @@ export function PermissionsPanel({
       </div>
 
       {/* Right Columns - Branch & Ledger Access (4 columns total on desktop, full width on mobile) */}
-      <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 h-[600px] sm:h-[650px]">
+      <div className="lg:col-span-4 grid grid-cols-1 gap-4 sm:gap-5 lg:gap-6 h-[600px] sm:h-[650px]">
         {/* Branch Access */}
         <div className={`rounded-lg sm:rounded-xl border overflow-hidden flex flex-col h-full ${
           isDark ? 'border-gray-700' : 'border-gray-200'
@@ -398,58 +380,7 @@ export function PermissionsPanel({
           </div>
         </div>
 
-        {/* Ledger Access */}
-        {/* <div className={`rounded-lg sm:rounded-xl border overflow-hidden flex flex-col h-full ${
-          isDark ? 'border-gray-700' : 'border-gray-200'
-        }`}>
-          <div className={`px-3 sm:px-4 py-2.5 sm:py-3 border-b ${
-            isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className={`text-xs sm:text-sm font-semibold flex items-center gap-2 ${
-                isDark ? 'text-gray-200' : 'text-gray-800'
-              }`}>
-                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-500" />
-                Ledger Access
-              </h3>
-              <input
-                type="checkbox"
-                checked={filteredLedgers.length > 0 && filteredLedgers.every(l => selectedLedgers.includes(l.id))}
-                onChange={handleSelectAllLedgers}
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                title="Select All"
-              />
-            </div>
-            <div className="relative">
-              <Search className={`absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-3.5 sm:h-3.5 ${
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              }`} />
-              <input
-                type="text"
-                value={ledgerSearch}
-                onChange={(e) => setLedgerSearch(e.target.value)}
-                placeholder="Search ledgers..."
-                className={`w-full pl-7 sm:pl-9 pr-2 sm:pr-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border ${
-                  isDark
-                    ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-500'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                } focus:outline-none focus:ring-2 focus:ring-purple-500`}
-              />
-            </div>
-            <p className={`text-[10px] sm:text-xs mt-1.5 sm:mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {selectedLedgers.length} of {DEFAULT_LEDGERS.length} selected
-            </p>
-          </div>
-
-          <div className="flex-1 overflow-hidden">
-            <VirtualLedgerList
-              ledgers={filteredLedgers}
-              selectedLedgers={selectedLedgers}
-              onLedgerToggle={onLedgerToggle}
-              isDark={isDark}
-            />
-          </div>
-        </div> */}
+        {/* Ledger Access removed */}
       </div>
     </>
   );

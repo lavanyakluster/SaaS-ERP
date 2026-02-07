@@ -35,7 +35,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
   const { data: rolesData, isLoading: rolesLoading } = useRoles();
   
   // Fetch user details if in edit mode
-  const { data: userData, isLoading: userLoading } = useUserById(userId);
+  const { data: userData, isLoading: userLoading } = useUserById(userId ?? null);
   
   // Create user mutation
   const createUserMutation = useCreateUser();
@@ -466,14 +466,11 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
             <PermissionsPanel
               modulePermissions={permissions.modulePermissions}
               selectedBranches={permissions.selectedBranches}
-              selectedLedgers={permissions.selectedLedgers}
               onModulePermissionToggle={handlers.handleModulePermissionToggle}
               onModuleSelectAll={handlers.handleModuleSelectAll}
               onSelectAllModules={handlers.handleSelectAllModules}
               onBranchToggle={handlers.handleBranchToggle}
               onSelectAllBranches={handlers.handleSelectAllBranches}
-              // onLedgerToggle={handlers.handleLedgerToggle}
-              // onSelectAllLedgers={handlers.handleSelectAllLedgers}
               isDark={isDark}
             />
           </div>

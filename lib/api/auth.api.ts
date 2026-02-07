@@ -33,8 +33,8 @@ export interface LoginResponse {
 }
 
 export interface MicrosoftAuthRequest {
-  code: string;
-  redirectUri: string;
+  IdToken: string;
+  Provider?: 'Microsoft' | 'microsoft';
 }
 
 export interface GoogleAuthRequest {
@@ -93,8 +93,7 @@ export interface ForgotPasswordResponse {
 }
 
 export interface ResetPasswordRequest {
-  Email: string;
-  Otp: string;
+  token: string;
   NewPassword: string;
 }
 
@@ -194,6 +193,9 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   return response.data;
 };
 
+/**
+ * Refresh access token
+ */
 /**
  * Create password for invited users
  */

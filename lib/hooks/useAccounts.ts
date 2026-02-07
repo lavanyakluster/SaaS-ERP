@@ -91,7 +91,7 @@ export const useAccounts = (
  * // - ratios: FinancialRatios
  * ```
  */
-export function useParsedAccounts(params: AccountsParams, enabled = true) {
+export function useParsedAccounts(params: Omit<AccountsParams, 'year'>, enabled = true) {
   const { data, ...rest } = useAccounts(params, enabled);
 
   const parsed: ParsedAccountsData | undefined = data ? parseAccountsData(data) : undefined;

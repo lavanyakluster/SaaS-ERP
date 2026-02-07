@@ -7,12 +7,10 @@
  */
 
 // ============================================================================
-// TYPE DEFINITIONS (for when package is not installed)
+// MSAL TYPES
 // ============================================================================
 
-type PublicClientApplication = any;
-type AccountInfo = any;
-type AuthenticationResult = any;
+import type { PublicClientApplication, AccountInfo, AuthenticationResult } from '@azure/msal-browser';
 
 import { msalConfig, loginRequest, isMicrosoftAuthConfigured } from './microsoft-auth.config';
 
@@ -52,6 +50,7 @@ const getMsalInstance = async (): Promise<PublicClientApplication> => {
   }
 
   if (!msalInstance) {
+    const { PublicClientApplication } = await import('@azure/msal-browser');
     msalInstance = new PublicClientApplication(msalConfig);
     await msalInstance.initialize();
   }

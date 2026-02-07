@@ -5,8 +5,10 @@ import { Package, TrendingUp, ShoppingCart, AlertTriangle, Download, ChevronDown
 import { usePharmacyItemDashboard } from '@/lib/hooks/usePharmacyItemDashboard';
 
 interface Branch {
-  branchCode: string;
-  branchName: string;
+  branchCode?: string;
+  branchName?: string;
+  bR_COD?: string;
+  bR_NM?: string;
 }
 
 interface ModernItemDashboardProps {
@@ -249,7 +251,8 @@ export function ModernItemDashboard({
 
   // ✅ Export to CSV function
   const handleExportToExcel = () => {
-    const dataToExport = tableTab === 'item-analysis' ? pharmacyItems : expiryItems;
+    const isItemAnalysis = tableTab === 'item-analysis';
+    const dataToExport = isItemAnalysis ? pharmacyItems : expiryItems;
     
     if (!dataToExport || dataToExport.length === 0) {
       alert('No data to export');
@@ -259,21 +262,21 @@ export function ModernItemDashboard({
     // Create CSV content
     let csvContent = '';
     
-    if (tableTab === 'item-analysis') {
+    if (isItemAnalysis) {
       // Header row for item analysis
       csvContent = 'Item Name,Category,Supplier,Brand,Current Stock,Days of Supply,Reorder Status,Nearest Expiry,Expiry Risk,Total Sold,Total Revenue,ABC Class\n';
       
       // Data rows
-      dataToExport.forEach(item => {
+      pharmacyItems.forEach(item => {
         csvContent += `"${item.itemName}","${item.itemCategory || 'N/A'}","${item.supplier || 'N/A'}","${item.brand}",${item.currentStock},${item.daysOfSupply},"${item.reorderStatus}","${item.nearestExpiryDate || 'N/A'}","${item.expiryRisk}",${item.totalSold},${item.totalRevenue},"${item.aBCClass}"\n`;
       });
     } else {
       // Header row for expiry items
-      csvContent = 'Item Name,Brand,Batch No,Expiry Date,Days to Expiry,Quantity,Status\n';
+      csvContent = 'Item Name,Category,Company,Expiry,Status,Stock,Supplier\n';
       
       // Data rows
-      dataToExport.forEach(item => {
-        csvContent += `"${item.itemName}","${item.brand}","${item.batchNo}","${item.expiryDate}",${item.daysToExpiry},${item.quantity},"${item.expiryStatus}"\n`;
+      expiryItems.forEach(item => {
+        csvContent += `"${item.itemName || item.sT_COD}","${item.cT_NM || 'N/A'}","${item.company || 'N/A'}","${item.expiryMMYY}","${item.expiryStatus}",${item.stockInUnits || 0},"${item.supplier || 'N/A'}"\n`;
       });
     }
     

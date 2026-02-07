@@ -10,8 +10,7 @@ import { ClipboardList, Download, Filter, Calendar, TrendingDown, Package } from
 import { useTheme } from '@/lib/store/theme-store';
 
 export default function PurchaseReportPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
   const [dateRange, setDateRange] = useState('This Month');
   const [reportType, setReportType] = useState('summary');
 

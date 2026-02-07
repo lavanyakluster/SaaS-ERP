@@ -7,15 +7,10 @@
 // Constants
 export * from './constants';
 
-// Utilities
-export * from './utils';
-
 // Stores
 export {
   useAuthStore,
   useAuthStatus,
-  useAuthUser,
-  useAuthTokens,
   useSelectedFirmYear,
   useAuthActions,
   useIsAuthenticated,
@@ -27,7 +22,6 @@ export {
 export {
   useThemeStore,
   useTheme,
-  useThemeActions,
   type Theme,
 } from './store/theme-store';
 

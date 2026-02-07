@@ -20,8 +20,7 @@ import SalesReturn from '@/components/reports/sales/SalesReturn';
 type SalesTab = 'daily-sales-summary' | 'sales-conversion' | 'sales-register' | 'sales-return';
 
 export default function SalesReportsPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<SalesTab>(
     (searchParams.get('tab') as SalesTab) || 'daily-sales-summary'

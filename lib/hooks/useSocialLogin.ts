@@ -43,15 +43,12 @@ export const useSocialLogin = (options: UseSocialLoginOptions) => {
   const setTokens = useAuthStore((state) => state.setTokens);
   const setUser = useAuthStore((state) => state.setUser);
 
-  const mutationFn = options.provider === 'google' ? loginWithGoogle : loginWithMicrosoft;
-
   return useMutation({
     mutationFn: (data: SocialLoginRequest) => {
       if (options.provider === 'google') {
-        return mutationFn(data as GoogleAuthRequest);
-      } else {
-        return mutationFn(data as MicrosoftAuthRequest);
+        return loginWithGoogle(data as GoogleAuthRequest);
       }
+      return loginWithMicrosoft(data as MicrosoftAuthRequest);
     },
     onSuccess: (data) => {
       // Store tokens and update auth state

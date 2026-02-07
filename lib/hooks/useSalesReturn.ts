@@ -14,7 +14,7 @@ import type {
 /**
  * Hook to fetch sales return master data
  */
-export const useSalesReturn = (params: SalesReturnParams) => {
+export const useSalesReturn = (params: Omit<SalesReturnParams, 'year'>) => {
   const selectedYear = useAuthStore((state) => state.selectedYear);
 
   return useQuery({
@@ -45,7 +45,10 @@ export const useSalesReturn = (params: SalesReturnParams) => {
 /**
  * Hook to fetch sales return detail data
  */
-export const useSalesReturnDetail = (params: SalesReturnDetailParams, enabled: boolean = false) => {
+export const useSalesReturnDetail = (
+  params: Omit<SalesReturnDetailParams, 'year'>,
+  enabled: boolean = false
+) => {
   const selectedYear = useAuthStore((state) => state.selectedYear);
 
   return useQuery({

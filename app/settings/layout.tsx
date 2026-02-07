@@ -144,8 +144,7 @@ const DEFAULT_SECTION_METADATA = {
 
 function SettingsLayoutContent({ children }: SettingsLayoutProps) {
   const { selectedOrganization } = useAuthStore();
-  const theme = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
   const { activeCategory, activeSection, setActiveCategory, setActiveSection } = useSettings();
 
   const sectionMeta = SECTION_METADATA[activeSection] || DEFAULT_SECTION_METADATA;
@@ -159,7 +158,7 @@ function SettingsLayoutContent({ children }: SettingsLayoutProps) {
         onCategoryChange={setActiveCategory}
         onSectionChange={setActiveSection}
         isDark={isDark}
-        organizationName={selectedOrganization?.organizationName}
+        organizationName={selectedOrganization?.displayName || selectedOrganization?.name}
       />
 
       {/* Main Content Area */}

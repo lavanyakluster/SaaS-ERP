@@ -79,7 +79,7 @@ export default function DailySalesSummary() {
       'Cash Sales': item.cashWet || item.cashNet || 0,
       'Card Sales': item.cardWet || item.cardNet || 0,
       'Credit Sales': item.creditWet || item.creditNet || 0,
-      'Returned Sales': item.returnedSales || 0, // Add if available in API
+      'Returned Sales': 0,
       'Total Sales': (item.cashWet || item.cashNet || 0) + 
                      (item.cardWet || item.cardNet || 0) + 
                      (item.creditWet || item.creditNet || 0),
@@ -198,6 +198,21 @@ export default function DailySalesSummary() {
     console.log('💰 Totals Calculated:', result);
     return result;
   }, [tableData, activeTab]);
+
+  const cashTotals = activeTab === 'salesman'
+    ? null
+    : (totals as {
+        cashSales: number;
+        cardSales: number;
+        creditSales: number;
+        insurance: number;
+        pointsRedeemed: number;
+        totalBills: number;
+      });
+
+  const salesmanTotals = activeTab === 'salesman'
+    ? (totals as { sale: number; profit: number })
+    : null;
 
   return (
     <div className="space-y-6 h-full overflow-y-auto pr-2">
@@ -332,7 +347,13 @@ export default function DailySalesSummary() {
                           borderRadius: '8px',
                           color: isDark ? '#F3F4F6' : '#111827',
                         }}
-                        formatter={(value: number) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        formatter={(value?: number) => {
+                          if (value === undefined || value === null) return '';
+                          return value.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          });
+                        }}
                       />
                       <Legend />
                       <Bar dataKey="sales" fill="#6366F1" name="Sales" />
@@ -373,7 +394,13 @@ export default function DailySalesSummary() {
                           borderRadius: '8px',
                           color: isDark ? '#F3F4F6' : '#111827',
                         }}
-                        formatter={(value: number) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        formatter={(value?: number) => {
+                          if (value === undefined || value === null) return '';
+                          return value.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          });
+                        }}
                       />
                       <Legend />
                       <Bar dataKey="Cash Sales" fill="#C026D3" name="Cash Sales" />
@@ -457,12 +484,12 @@ export default function DailySalesSummary() {
                   <tfoot className="bg-indigo-600 text-white font-semibold">
                     <tr>
                       <td colSpan={2} className="p-3 whitespace-nowrap">Total</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.cashSales.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.cardSales.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.creditSales.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.insurance.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.pointsRedeemed.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.totalBills}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.cashSales.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.cardSales.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.creditSales.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.insurance.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.pointsRedeemed.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.totalBills}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -514,8 +541,8 @@ export default function DailySalesSummary() {
                   <tfoot className="bg-indigo-600 text-white font-semibold">
                     <tr>
                       <td colSpan={2} className="p-3 whitespace-nowrap">Total</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.sale.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{totals.profit.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{salesmanTotals?.sale.toFixed(2)}</td>
+                      <td className="p-3 text-right whitespace-nowrap">{salesmanTotals?.profit.toFixed(2)}</td>
                     </tr>
                   </tfoot>
                 </table>

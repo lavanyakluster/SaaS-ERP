@@ -1,7 +1,7 @@
 'use client';
 
 import type { WidgetSize } from './types';
-import { ModernChartWidget } from './ModernChartWidget';
+import { ResizableChartWidget } from './ResizableChartWidget';
 
 export interface WidgetData {
   id: string;
@@ -23,6 +23,7 @@ interface WidgetsGridProps {
   onFullscreen: (widgetId: string) => void;
   onAddWidget: () => void;
   isLoading?: boolean;
+  isDark: boolean;
 }
 
 export function WidgetsGrid({
@@ -34,6 +35,7 @@ export function WidgetsGrid({
   onFullscreen,
   onAddWidget,
   isLoading = false,
+  isDark,
 }: WidgetsGridProps) {
   const getWidgetSizeClass = (size: WidgetSize) => {
     switch (size) {
@@ -67,19 +69,20 @@ export function WidgetsGrid({
     <div className="grid grid-cols-1 gap-6">
       {widgets.map((widget) => (
         <div key={widget.id} className={getWidgetSizeClass(widget.size)}>
-          <ModernChartWidget
+          <ResizableChartWidget
+            id={widget.id}
             title={widget.title}
             subtitle={widget.subtitle}
             chartType={widget.chartType}
             data={widget.data}
             dataKeys={widget.dataKeys}
-            category={widget.category}
+            isDark={isDark}
             size={widget.size}
-            onRemove={() => onRemove(widget.id)}
-            onChartTypeChange={(newType) => onChartTypeChange(widget.id, newType)}
-            onSizeChange={(newSize) => onSizeChange(widget.id, newSize)}
-            onDuplicate={() => onDuplicate(widget.id)}
-            onFullscreen={() => onFullscreen(widget.id)}
+            onRemove={onRemove}
+            onChangeChartType={onChartTypeChange}
+            onChangeSize={onSizeChange}
+            onDuplicate={onDuplicate}
+            onFullscreen={onFullscreen}
           />
         </div>
       ))}

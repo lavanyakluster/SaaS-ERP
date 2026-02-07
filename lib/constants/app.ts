@@ -105,7 +105,6 @@ export const API_ENDPOINTS = {
     login: '/api/login',
     signup: '/api/signup',
     logout: '/api/logout',
-    refresh: '/api/refresh-token',
     forgotPassword: '/api/forgot-password',
     resetPassword: '/api/reset-password',
     verifyEmail: '/api/verify-email',

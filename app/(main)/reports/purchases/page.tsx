@@ -18,8 +18,7 @@ import PurchaseReturn from '@/components/reports/purchase/PurchaseReturn';
 type PurchaseTab = 'purchase-register' | 'purchase-return';
 
 export default function PurchaseReportsPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<PurchaseTab>(
     (searchParams.get('tab') as PurchaseTab) || 'purchase-register'

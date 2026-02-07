@@ -14,7 +14,8 @@ import {
 import { TrendingUp } from 'lucide-react';
 
 export default function ProfitCenterMasterPage() {
-  const theme = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   const { activeGradient } = useGradientStore();
 
   const [formData, setFormData] = useState({
@@ -67,7 +68,7 @@ export default function ProfitCenterMasterPage() {
         subtitle="Manage profit center allocation"
         icon={TrendingUp}
         gradient={activeGradient}
-        theme={theme}
+        theme={themeMode}
         onSave={handleSave}
         onDelete={handleDelete}
         onClear={handleClear}
@@ -79,7 +80,7 @@ export default function ProfitCenterMasterPage() {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <MasterFormCard theme={theme} maxWidth="5xl">
+          <MasterFormCard theme={themeMode} maxWidth="5xl">
             <div className="p-8">
               {/* Profit Center Information */}
               <MasterFormSection
@@ -87,7 +88,7 @@ export default function ProfitCenterMasterPage() {
                 subtitle="Define profit center details and sequence"
                 columns={1}
                 gap={4}
-                theme={theme}
+                theme={themeMode}
               >
                 <MasterFormInput
                   value={formData.code}
@@ -95,7 +96,7 @@ export default function ProfitCenterMasterPage() {
                   placeholder="e.g., PC001"
                   label="Profit Center Code"
                   required
-                  theme={theme}
+                  theme={themeMode}
                 />
 
                 <MasterFormInput
@@ -104,7 +105,7 @@ export default function ProfitCenterMasterPage() {
                   placeholder="e.g., North Region Sales"
                   label="Profit Center Name"
                   required
-                  theme={theme}
+                  theme={themeMode}
                 />
 
                 <MasterFormInput
@@ -113,7 +114,7 @@ export default function ProfitCenterMasterPage() {
                   placeholder="Sequence Number"
                   label="Sequence Number"
                   type="number"
-                  theme={theme}
+                  theme={themeMode}
                 />
               </MasterFormSection>
 
@@ -127,7 +128,7 @@ export default function ProfitCenterMasterPage() {
                   'Common examples: Regional offices, Product divisions, Service departments',
                   'Use descriptive names for easy identification in reports'
                 ]}
-                theme={theme}
+                theme={themeMode}
                 variant="info"
                 className="mt-6"
               />

@@ -17,4 +17,4 @@ export { AlertMessage } from './AlertMessage';
 export { FormDivider } from './FormDivider';
 export { SubmitButton } from './SubmitButton';
 export { SecureBadge } from './SecureBadge';
-export { GoogleOneTapButton } from './GoogleOneTapButton';
+// Google One Tap removed

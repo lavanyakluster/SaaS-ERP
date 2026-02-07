@@ -212,7 +212,7 @@ function ResetPasswordContent() {
 
     // Submit password reset
     try {
-      await resetPassword({ token, newPassword: password });
+      await resetPassword({ token, NewPassword: password });
     } catch (err) {
       setErrors({ general: 'Failed to reset password. Please try again or request a new reset link.' });
     }

@@ -2,6 +2,7 @@
 
 import { CreditCard, Plus, Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useBillingHistory, useDownloadInvoice } from '@/lib/hooks/useSubscription';
+import type { BillingHistory } from '@/lib/api/subscription.api';
 
 interface BillingInformationSectionProps {
   isDark: boolean;
@@ -46,40 +47,53 @@ export function BillingInformationSection({ isDark }: BillingInformationSectionP
   ];
 
   // Use API data if available, otherwise use mock data
-  const billingHistory = billingHistoryData || [
+  const fallbackBillingHistory: BillingHistory[] = [
     {
-      id: '1',
+      invoiceId: '1',
       invoiceNumber: 'INV-2024-001',
       date: '2024-01-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
     },
     {
-      id: '2',
+      invoiceId: '2',
       invoiceNumber: 'INV-2023-012',
       date: '2023-12-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
     },
     {
-      id: '3',
+      invoiceId: '3',
       invoiceNumber: 'INV-2023-011',
       date: '2023-11-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
     },
     {
-      id: '4',
+      invoiceId: '4',
       invoiceNumber: 'INV-2023-010',
       date: '2023-10-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      status: 'paid' as const,
+      currency: 'AED',
+      status: 'paid',
     },
   ];
+
+  const invoices = (billingHistoryData ?? fallbackBillingHistory).map((invoice) => ({
+    id: invoice.invoiceNumber || invoice.invoiceId,
+    invoiceNumber: invoice.invoiceNumber,
+    date: invoice.date,
+    description: invoice.description,
+    amount: invoice.amount,
+    status: invoice.status,
+  }));
 
   // ============================================================================
   // EVENT HANDLERS
@@ -285,7 +299,7 @@ export function BillingInformationSection({ isDark }: BillingInformationSectionP
               </tr>
             </thead>
             <tbody>
-              {billingHistory.map((invoice) => (
+              {invoices.map((invoice) => (
                 <tr
                   key={invoice.id}
                   className={`border-b ${
@@ -346,7 +360,7 @@ export function BillingInformationSection({ isDark }: BillingInformationSectionP
           </table>
         </div>
 
-        {billingHistory.length === 0 && (
+        {invoices.length === 0 && (
           <div className="text-center py-12">
             <div
               className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${

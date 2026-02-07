@@ -11,7 +11,7 @@
  * - Auto-syncs with auth store
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getOrganizations, type OrganizationListItem } from '@/lib/api/organization.api';
 import { useAuthStore, useAuthStatus } from '@/lib/store/auth-store';
 import { useEffect } from 'react';
@@ -150,10 +150,10 @@ export const useOrganizations = () => {
  * Hook to prefetch organizations (useful for optimistic loading)
  */
 export const usePrefetchOrganizations = () => {
-  const queryClient = useQuery.queryClient;
+  const queryClient = useQueryClient();
   
   return () => {
-    queryClient?.prefetchQuery({
+    queryClient.prefetchQuery({
       queryKey: organizationKeys.lists(),
       queryFn: async () => {
         const response = await getOrganizations();

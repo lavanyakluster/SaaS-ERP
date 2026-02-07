@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import { X, Plus, Grid3x3, Save } from 'lucide-react';
-
-interface Widget {
-  id: string;
-  title: string;
-  subtitle?: string;
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'donut';
-  category: string;
-}
+import type { Widget } from '@/components/dashboard/types';
 
 interface DashboardCustomizerProps {
   isOpen: boolean;

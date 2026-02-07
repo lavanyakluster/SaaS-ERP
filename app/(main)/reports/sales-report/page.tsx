@@ -10,8 +10,7 @@ import { FileBarChart, Download, Filter, Calendar, TrendingUp } from 'lucide-rea
 import { useTheme } from '@/lib/store/theme-store';
 
 export default function SalesReportPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
   const [dateRange, setDateRange] = useState('This Month');
   const [reportType, setReportType] = useState('summary');
 

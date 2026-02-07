@@ -44,6 +44,8 @@ interface NavigationCategory {
   sections: SectionItem[];
 }
 
+export type SettingsNavItem = NavigationCategory;
+
 // ============================================
 // CONSTANTS
 // ============================================

@@ -22,7 +22,7 @@ interface AuthenticatedLayoutProps {
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const router = useRouter();
   const { status } = useAuthStore();
-  const theme = useTheme();
+  const { isDark } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -63,11 +63,11 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const layoutClasses = useMemo(
     () =>
       `h-screen flex flex-col ${
-        theme === 'dark'
+        isDark
           ? 'dark bg-gray-900'
           : 'bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50'
       }`,
-    [theme]
+    [isDark]
   );
 
   const mainClasses = useMemo(

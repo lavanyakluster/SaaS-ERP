@@ -12,7 +12,6 @@
 'use client';
 
 import { create } from 'zustand';
-import { shallow } from 'zustand/shallow';
 
 // ============================================================================
 // TYPES
@@ -203,8 +202,7 @@ export const useLoadingActions = () =>
       updateMessage: state.updateMessage,
       stopLoading: state.stopLoading,
       stopAllLoading: state.stopAllLoading,
-    }),
-    shallow
+    })
   );
 
 // ============================================================================

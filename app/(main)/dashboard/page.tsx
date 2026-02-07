@@ -91,8 +91,7 @@ const ModernAccountDashboard = dynamic(
 );
 
 export default function DashboardPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
   const { selectedOrganization } = useAuthStore();
   
   // ✅ CRITICAL: Auto-switch organization after login and fetch years
@@ -237,9 +236,9 @@ export default function DashboardPage() {
       csvRows.push(['Label', 'Value', 'Change']);
       metrics.forEach(metric => {
         csvRows.push([
-          metric.label,
+          metric.title,
           metric.value,
-          metric.change || 'N/A'
+          metric.change
         ]);
       });
     }
@@ -374,7 +373,7 @@ export default function DashboardPage() {
           isRefreshing={isRefreshing}
         />
         <div className="px-6 py-6">
-          <ModernSalesKPIDashboard />
+          <ModernSalesKPIDashboard isDark={isDark} />
         </div>
       </div>
     );
@@ -470,25 +469,29 @@ export default function DashboardPage() {
           onFullscreen={handleWidgetFullscreen}
           onAddWidget={() => setShowCustomizer(true)}
           isLoading={isLoading}
+          isDark={isDark}
         />
       </div>
 
       {/* Customizer Modal */}
-      {showCustomizer && (
-        <DashboardCustomizer
-          isOpen={showCustomizer}
-          onClose={() => setShowCustomizer(false)}
-          allWidgets={allWidgets}
-          selectedWidgets={dashboardWidgets[activeDashboard]}
-          onSave={handleSaveCustomization}
-        />
-      )}
+        {showCustomizer && (
+          <DashboardCustomizer
+            isOpen={showCustomizer}
+            onClose={() => setShowCustomizer(false)}
+            availableWidgets={allWidgets}
+            activeWidgets={dashboardWidgets[activeDashboard]}
+            onSave={handleSaveCustomization}
+            isDark={isDark}
+          />
+        )}
 
       {/* Fullscreen Widget Modal */}
       {fullscreenWidget && (
         <WidgetFullscreenModal
+          isOpen={!!fullscreenWidget}
           widget={fullscreenWidget}
           onClose={() => setFullscreenWidget(null)}
+          isDark={isDark}
         />
       )}
     </div>

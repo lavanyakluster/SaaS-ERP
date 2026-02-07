@@ -32,7 +32,7 @@ interface FormErrors {
   general?: string;
 }
 
-type SocialProvider = 'google' | 'microsoft';
+type SocialProvider = 'microsoft';
 
 // ============================================================================
 // CONSTANTS
@@ -51,7 +51,8 @@ const PASSWORD_REQUIREMENTS = [
 
 export default function SignUpPage() {
   const router = useRouter();
-  const theme = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   
   // Form state
   const [mounted, setMounted] = useState(false);
@@ -219,33 +220,33 @@ export default function SignUpPage() {
 
   return (
     <div className={`min-h-screen flex ${
-      theme.theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+      isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
     }`}>
       {/* Enterprise Carousel Section - Left Side */}
       <div className="hidden lg:block lg:w-1/2 xl:w-[55%] relative overflow-hidden min-h-screen">
-        <EnterpriseCarousel theme={theme.theme} />
+        <EnterpriseCarousel theme={themeMode} />
       </div>
 
       {/* Sign Up Form Section - Right Side - ULTRA COMPACT */}
       <div className={`flex-1 flex items-center justify-center p-3 lg:p-6 min-h-screen ${
-        theme.theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+        isDark ? 'bg-gray-900' : 'bg-white'
       }`}>
         <div className="w-full max-w-md">
           {/* Compact Card */}
           <div className={`rounded-2xl shadow-xl border p-5 lg:p-6 ${
-            theme.theme === 'dark' 
+            isDark 
               ? 'bg-gray-800 border-gray-700' 
               : 'bg-white border-gray-200'
           }`}>
             {/* Header - Ultra Compact */}
             <div className="text-center mb-4">
               <h1 className={`text-xl font-bold mb-1 ${
-                theme.theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDark ? 'text-white' : 'text-gray-900'
               }`}>
                 Create your account
               </h1>
               <p className={`text-xs ${
-                theme.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 Start your 14-day free trial • No credit card required
               </p>
@@ -257,7 +258,7 @@ export default function SignUpPage() {
                 <AlertMessage 
                   type="error" 
                   message={errors.general}
-                  theme={theme}
+                  theme={themeMode}
                 />
               </div>
             )}
@@ -265,20 +266,15 @@ export default function SignUpPage() {
             {/* Social Sign Up - Compact */}
             <div className="mb-3">
               <SocialAuthButtons
-                theme={theme}
+                theme={themeMode}
                 disabled={isLoading}
                 isLoading={socialLoading}
                 microsoftLoading={socialLoading === 'microsoft'}
-                onGoogleSuccess={() => handleSocialLogin('google')}
-                onGoogleError={(error) => {
-                  setSocialLoading(null);
-                  setErrors({ general: 'Google sign up failed. Please try again.' });
-                }}
                 onMicrosoftClick={() => handleSocialLogin('microsoft')}
               />
             </div>
 
-            <FormDivider theme={theme} />
+            <FormDivider theme={themeMode} />
 
             {/* Sign Up Form - Ultra Compact */}
             <form onSubmit={handleSubmit} className="space-y-3" noValidate>
@@ -292,7 +288,7 @@ export default function SignUpPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 error={errors.fullName}
-                theme={theme}
+                theme={themeMode}
                 required
                 disabled={isLoading}
                 autoComplete="name"
@@ -308,7 +304,7 @@ export default function SignUpPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 error={errors.email}
-                theme={theme}
+                theme={themeMode}
                 required
                 disabled={isLoading}
                 autoComplete="email"
@@ -324,7 +320,7 @@ export default function SignUpPage() {
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
                 error={errors.password}
-                theme={theme}
+                theme={themeMode}
                 required
                 disabled={isLoading}
                 autoComplete="new-password"
@@ -333,7 +329,7 @@ export default function SignUpPage() {
               {/* Password Requirements - Ultra Compact */}
               {(passwordFocused || password.length > 0) && (
                 <div className={`p-2 rounded-lg border text-xs ${
-                  theme.theme === 'dark' 
+                  isDark 
                     ? 'bg-gray-900/50 border-gray-700' 
                     : 'bg-gray-50 border-gray-200'
                 }`}>
@@ -346,7 +342,7 @@ export default function SignUpPage() {
                           className={`flex items-center gap-1 ${
                             isValid 
                               ? 'text-green-600 dark:text-green-400' 
-                              : theme.theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                              : isDark ? 'text-gray-500' : 'text-gray-400'
                           }`}
                         >
                           <CheckCircle2 className={`w-2.5 h-2.5 flex-shrink-0 ${
@@ -368,7 +364,7 @@ export default function SignUpPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 error={errors.confirmPassword}
-                theme={theme}
+                theme={themeMode}
                 required
                 disabled={isLoading}
                 autoComplete="new-password"
@@ -392,7 +388,7 @@ export default function SignUpPage() {
                   <label
                     htmlFor="terms"
                     className={`text-[10px] cursor-pointer select-none leading-tight ${
-                      theme.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDark ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
                     I agree to the{' '}
@@ -421,9 +417,8 @@ export default function SignUpPage() {
               {/* Submit Button - Compact */}
               <div className="pt-1">
                 <SubmitButton
-                  loading={isLoading}
+                  isLoading={isLoading}
                   disabled={isLoading}
-                  theme={theme}
                 >
                   Create account
                 </SubmitButton>
@@ -432,7 +427,7 @@ export default function SignUpPage() {
 
             {/* Sign In Link - Ultra Compact */}
             <p className={`text-center text-[10px] mt-4 ${
-              theme.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>
               Already have an account?{' '}
               <Link 
@@ -446,7 +441,7 @@ export default function SignUpPage() {
 
           {/* Trust Badge - Ultra Compact */}
           <div className={`text-center mt-3 text-[10px] ${
-            theme.theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+            isDark ? 'text-gray-500' : 'text-gray-500'
           }`}>
             🔒 Secure • 256-bit encryption • GDPR compliant
           </div>

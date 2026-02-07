@@ -3,17 +3,18 @@
  * Reusable alert for success, error, info messages
  */
 
-import { CheckCircle, AlertCircle, Info } from 'lucide-react';
-import { ReactNode } from 'react';
+import { CheckCircle, AlertCircle, Info, type LucideProps } from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
 
 interface AlertMessageProps {
   type: 'success' | 'error' | 'info';
   title?: string;
   message: string | ReactNode;
   theme?: 'light' | 'dark';
+  icon?: ReactNode | ComponentType<LucideProps>;
 }
 
-export function AlertMessage({ type, title, message, theme = 'light' }: AlertMessageProps) {
+export function AlertMessage({ type, title, message, theme = 'light', icon }: AlertMessageProps) {
   const getStyles = () => {
     switch (type) {
       case 'success':
@@ -55,6 +56,13 @@ export function AlertMessage({ type, title, message, theme = 'light' }: AlertMes
   };
 
   const getIcon = () => {
+    if (icon) {
+      if (typeof icon === 'function') {
+        const Icon = icon;
+        return <Icon className="w-5 h-5" />;
+      }
+      return icon;
+    }
     switch (type) {
       case 'success':
         return <CheckCircle className="w-5 h-5" />;

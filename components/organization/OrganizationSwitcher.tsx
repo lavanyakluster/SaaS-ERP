@@ -90,9 +90,9 @@ export function OrganizationSwitcher({ onAddOrganization, className = '' }: Orga
 
   // ✅ Sync API organizations to store
   useEffect(() => {
-    if (apiOrganizations?.data && Array.isArray(apiOrganizations.data)) {
+    if (Array.isArray(apiOrganizations)) {
       // Map API organizations to store format
-      const mappedOrgs = apiOrganizations.data.map((org) => ({
+      const mappedOrgs = apiOrganizations.map((org) => ({
         id: org.id,
         name: org.organizationName,
         displayName: org.organizationName,

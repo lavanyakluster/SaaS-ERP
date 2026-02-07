@@ -383,14 +383,11 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
             <PermissionsPanel
               modulePermissions={permissions.modulePermissions}
               selectedBranches={permissions.selectedBranches}
-              selectedLedgers={permissions.selectedLedgers}
               onModulePermissionToggle={handlers.handleModulePermissionToggle}
               onModuleSelectAll={handlers.handleModuleSelectAll}
               onSelectAllModules={handlers.handleSelectAllModules}
               onBranchToggle={handlers.handleBranchToggle}
               onSelectAllBranches={handlers.handleSelectAllBranches}
-              // onLedgerToggle={handlers.handleLedgerToggle}
-              // onSelectAllLedgers={handlers.handleSelectAllLedgers}
               isDark={isDark}
             />
           </div>

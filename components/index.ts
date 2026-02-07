@@ -11,7 +11,6 @@ export * from './common';
 export * from './auth';
 
 // Dashboard components
-export * from './dashboard';
 
 // Layout components
 export { default as Sidebar } from './layout/Sidebar';

@@ -14,7 +14,7 @@ import type {
 /**
  * Hook to fetch sales register master data
  */
-export const useSalesRegister = (params: SalesRegisterParams) => {
+export const useSalesRegister = (params: Omit<SalesRegisterParams, 'year'>) => {
   const selectedYear = useAuthStore((state) => state.selectedYear);
 
   return useQuery({
@@ -45,7 +45,10 @@ export const useSalesRegister = (params: SalesRegisterParams) => {
 /**
  * Hook to fetch sales register detail data
  */
-export const useSalesRegisterDetail = (params: SalesRegisterDetailParams, enabled: boolean = false) => {
+export const useSalesRegisterDetail = (
+  params: Omit<SalesRegisterDetailParams, 'year'>,
+  enabled: boolean = false
+) => {
   const selectedYear = useAuthStore((state) => state.selectedYear);
 
   return useQuery({

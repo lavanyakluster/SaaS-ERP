@@ -81,7 +81,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
             refetchOnReconnect: false,
             
             // ⚡ PERFORMANCE: Only refetch on mount if data is stale
-            refetchOnMount: 'stale',
+            refetchOnMount: true,
           },
           mutations: {
             // Retry mutations once on network errors only

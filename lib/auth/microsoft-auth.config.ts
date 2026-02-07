@@ -50,7 +50,7 @@ export const msalConfig: Configuration = {
   system: {
     loggerOptions: {
       logLevel: process.env.NODE_ENV === 'development' ? 3 : 0, // Verbose in dev, Error in prod
-      loggerCallback: (level, message, containsPii) => {
+      loggerCallback: (level: number, message: string, containsPii: boolean) => {
         if (containsPii) return;
         
         // Ignore user cancellation errors (when user closes popup)

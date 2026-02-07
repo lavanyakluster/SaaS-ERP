@@ -24,8 +24,7 @@ import { BillingInformationSection } from '@/components/settings/sections/Billin
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const { activeSection, setActiveSection } = useSettings();
-  const theme = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark } = useTheme();
 
   // ✅ Handle URL query parameter for section
   useEffect(() => {

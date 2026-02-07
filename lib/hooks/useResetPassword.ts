@@ -33,7 +33,7 @@ export const useResetPassword = (options?: UseResetPasswordOptions) => {
   return useMutation({
     mutationFn: (data: ResetPasswordRequest) => resetPassword(data),
     onSuccess: (data) => {
-      if (data.status === 'success') {
+      if (data.success) {
         toast.success('Password Reset Successful!', {
           description: data.message || 'Your password has been reset successfully.',
         });

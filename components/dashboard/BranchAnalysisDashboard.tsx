@@ -1,6 +1,5 @@
 'use client';
 
-import type { ChartTooltipProps } from '@/types/dashboard';
 import { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { ChevronDown, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,6 +13,10 @@ interface BranchAnalysisDashboardProps {
 
 type TabType = 'sales' | 'profit' | 'ratio' | 'growth' | 'rep';
 type ChartType = 'bar' | 'line' | 'column';
+type ChartTooltipProps = {
+  active?: boolean;
+  payload?: Array<any>;
+};
 
 export function BranchAnalysisDashboard({ 
   isDark, 
@@ -31,7 +34,7 @@ export function BranchAnalysisDashboard({
     }
 
     return apibranchSalesData.map(item => ({
-      name: item.BrCode,
+      name: item.BranchCode,
       thisYear: item.ThisYearSale,
       lastYear: item.LastYearSale,
       growth: item.LastYearSale 
@@ -50,7 +53,7 @@ export function BranchAnalysisDashboard({
     }
 
     return apibranchSalesData.map(item => ({
-      name: item.BrCode,
+      name: item.BranchCode,
       thisYear: item.ThisYearProfit,
       lastYear: item.LastYearProfit,
       growth: item.LastYearProfit 
@@ -73,7 +76,7 @@ export function BranchAnalysisDashboard({
         ? ((item.ThisYearSale - item.LastYearSale) / item.LastYearSale * 100)
         : 0;
       return {
-        name: item.BrCode,
+        name: item.BranchCode,
         ratio,
         label: `${ratio.toFixed(1)}%`,
       };
@@ -239,7 +242,10 @@ export function BranchAnalysisDashboard({
                 position: 'top',
                 fill: isDark ? '#9ca3af' : '#6b7280',
                 fontSize: 11,
-                formatter: (value: number) => value.toLocaleString(),
+                formatter: (value?: any) => {
+                  if (value === undefined || value === null) return '';
+                  return value.toLocaleString();
+                },
               }}
             />
           </BarChart>
@@ -249,6 +255,7 @@ export function BranchAnalysisDashboard({
 
     if (activeTab === 'ratio' || activeTab === 'growth') {
       // Single bar chart for ratio analysis
+      const ratioData = data as Array<{ name: string; ratio: number; label: string }>;
       return (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
@@ -285,8 +292,10 @@ export function BranchAnalysisDashboard({
                 position: 'top',
                 fill: isDark ? '#9ca3af' : '#6b7280',
                 fontSize: 11,
-                formatter: (value: number) => {
-                  const item = data.find(d => d.ratio === value);
+                formatter: (value?: any) => {
+                  if (value === undefined || value === null) return '';
+                  const numericValue = typeof value === 'number' ? value : Number(value);
+                  const item = ratioData.find(d => d.ratio === numericValue);
                   return item?.label || value;
                 },
               }}
@@ -344,7 +353,10 @@ export function BranchAnalysisDashboard({
               position: 'top',
               fill: isDark ? '#9ca3af' : '#6b7280',
               fontSize: 10,
-              formatter: (value: number) => value.toLocaleString(),
+              formatter: (value?: any) => {
+                if (value === undefined || value === null) return '';
+                return value.toLocaleString();
+              },
             } : undefined}
           />
           <Bar
@@ -355,7 +367,10 @@ export function BranchAnalysisDashboard({
               position: 'top',
               fill: isDark ? '#9ca3af' : '#6b7280',
               fontSize: 10,
-              formatter: (value: number) => value ? value.toLocaleString() : '',
+              formatter: (value?: any) => {
+                if (value === undefined || value === null) return '';
+                return value.toLocaleString();
+              },
             } : undefined}
           />
         </BarChart>

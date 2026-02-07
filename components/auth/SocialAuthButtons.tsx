@@ -2,19 +2,15 @@
 
 /**
  * SocialAuthButtons Component
- * Google One Tap and Microsoft OAuth login buttons
+ * Microsoft OAuth login button
  */
-
-import { GoogleOneTapButton } from './GoogleOneTapButton';
 
 interface SocialAuthButtonsProps {
   theme?: 'light' | 'dark';
   disabled?: boolean;
-  isLoading?: 'google' | 'microsoft' | null;
+  isLoading?: 'microsoft' | null;
   onMicrosoftClick: () => void;
   microsoftLoading?: boolean;
-  onGoogleSuccess?: (data: any) => void;
-  onGoogleError?: (error: any) => void;
 }
 
 export function SocialAuthButtons({
@@ -23,24 +19,10 @@ export function SocialAuthButtons({
   isLoading = null,
   onMicrosoftClick,
   microsoftLoading = false,
-  onGoogleSuccess,
-  onGoogleError,
 }: SocialAuthButtonsProps) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {/* Google One Tap Button */}
-      <div className="flex items-center justify-center">
-        <GoogleOneTapButton
-          text="continue_with"
-          theme={theme === 'dark' ? 'filled_black' : 'outline'}
-          size="large"
-          shape="rectangular"
-          onSuccess={onGoogleSuccess}
-          onError={onGoogleError}
-        />
-      </div>
-
-      {/* Microsoft Button - Matching Google's style */}
+    <div className="grid grid-cols-1 gap-3">
+      {/* Microsoft Button */}
       <button
         type="button"
         onClick={onMicrosoftClick}

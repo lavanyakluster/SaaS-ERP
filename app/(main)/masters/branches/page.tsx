@@ -16,7 +16,8 @@ import {
 import { Building } from 'lucide-react';
 
 export default function BranchMasterPage() {
-  const theme = useTheme();
+  const { theme, isDark } = useTheme();
+  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
   const { activeGradient } = useGradientStore();
 
   const [formData, setFormData] = useState({
@@ -139,7 +140,7 @@ export default function BranchMasterPage() {
         subtitle="Configure branch locations and settings"
         icon={Building}
         gradient={activeGradient}
-        theme={theme}
+        theme={themeMode}
         onSave={handleSave}
         onDelete={handleDelete}
         onClear={handleClear}
@@ -151,14 +152,14 @@ export default function BranchMasterPage() {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <MasterFormCard theme={theme}>
+          <MasterFormCard theme={themeMode}>
             <div className="p-6">
               {/* Basic Information */}
               <MasterFormSection
                 title="Basic Information"
                 columns={3}
                 gap={4}
-                theme={theme}
+                theme={themeMode}
               >
                 <MasterFormInput
                   value={formData.branchCode}
@@ -166,7 +167,7 @@ export default function BranchMasterPage() {
                   placeholder="Branch Code"
                   label="Branch Code"
                   required
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -175,7 +176,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('bUnitCode', value)}
                   placeholder="Business Unit Code"
                   label="B.Unit Code"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -184,7 +185,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('bUnitName', value)}
                   placeholder="Business Unit Name"
                   label="B.Unit Name"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -194,7 +195,7 @@ export default function BranchMasterPage() {
                   placeholder="Branch Name"
                   label="Name"
                   required
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -204,7 +205,7 @@ export default function BranchMasterPage() {
                   placeholder="Phone"
                   label="Phone"
                   type="tel"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -212,7 +213,7 @@ export default function BranchMasterPage() {
                   checked={formData.store}
                   onChange={(value) => handleInputChange('store', value)}
                   label="Store"
-                  theme={theme}
+                  theme={themeMode}
                 />
               </MasterFormSection>
 
@@ -221,7 +222,7 @@ export default function BranchMasterPage() {
                 title="Address"
                 columns={2}
                 gap={4}
-                theme={theme}
+                theme={themeMode}
                 className="mt-6"
               >
                 <MasterFormInput
@@ -229,7 +230,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('address', value)}
                   placeholder="Address"
                   label="Address"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -238,7 +239,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('addressLine1', value)}
                   placeholder="Address Line 1"
                   label="Address Line 1"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -247,7 +248,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('addressLine2', value)}
                   placeholder="Address Line 2"
                   label="Address Line 2"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -256,7 +257,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('addressLine3', value)}
                   placeholder="Address Line 3"
                   label="Address Line 3"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
               </MasterFormSection>
@@ -266,7 +267,7 @@ export default function BranchMasterPage() {
                 title="Bill Numbering"
                 columns={3}
                 gap={4}
-                theme={theme}
+                theme={themeMode}
                 className="mt-6"
               >
                 <MasterFormInput
@@ -274,7 +275,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('dcNo', value)}
                   placeholder="DC No"
                   label="DC No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -283,7 +284,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('salesBillNo', value)}
                   placeholder="Sales Bill No"
                   label="Sales Bill No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -292,7 +293,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('exportBillNo', value)}
                   placeholder="Export Bill No"
                   label="Export Bill No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -301,7 +302,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('quoteNo', value)}
                   placeholder="Quote No"
                   label="Quote No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -310,7 +311,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('transferBillNo', value)}
                   placeholder="Transfer Bill No"
                   label="Transfer Bill No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -319,7 +320,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('grNo', value)}
                   placeholder="GR No"
                   label="GR No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -328,7 +329,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('debitNoteNo', value)}
                   placeholder="Debit Note No"
                   label="Debit Note No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -337,7 +338,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('creditNoteNo', value)}
                   placeholder="Credit Note No"
                   label="Credit Note No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -346,7 +347,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('salesReturnNo', value)}
                   placeholder="Sales Return No"
                   label="Sales Return No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -355,7 +356,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('adjNo', value)}
                   placeholder="Adjustment No"
                   label="Adjustment No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -364,7 +365,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('purchaseReturnNo', value)}
                   placeholder="Purchase Return No"
                   label="Purchase Return No"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -373,7 +374,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('prefix', value)}
                   placeholder="Prefix"
                   label="Prefix"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
               </MasterFormSection>
@@ -383,7 +384,7 @@ export default function BranchMasterPage() {
                 title="Tax & Configuration"
                 columns={3}
                 gap={4}
-                theme={theme}
+                theme={themeMode}
                 className="mt-6"
               >
                 <MasterFormInput
@@ -391,7 +392,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('gstn', value)}
                   placeholder="GSTN"
                   label="GSTN"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -400,7 +401,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('billFormat', value)}
                   placeholder="Bill Format"
                   label="Bill Format"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -410,7 +411,7 @@ export default function BranchMasterPage() {
                   placeholder="Last Close Date"
                   label="Last Close Date"
                   type="date"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -419,7 +420,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('runningRate', value)}
                   placeholder="Running Rate"
                   label="Running Rate"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -428,7 +429,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('runningShift', value)}
                   options={shiftOptions}
                   label="Running Shift"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -437,7 +438,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('autoDate', value)}
                   options={yesNoOptions}
                   label="Auto Date"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -446,7 +447,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('sessionEnabled', value)}
                   options={yesNoOptions}
                   label="Session Enabled"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -455,7 +456,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('autoSkipInBilling', value)}
                   options={yesNoOptions}
                   label="Auto Skip in Billing"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -464,7 +465,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('defaultType', value)}
                   options={defaultTypeOptions}
                   label="Default Type"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -473,7 +474,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('shiftEnabled', value)}
                   options={yesNoOptions}
                   label="Shift Enabled"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -482,7 +483,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('billerCashier', value)}
                   options={yesNoOptions}
                   label="Biller/Cashier"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
 
@@ -490,7 +491,7 @@ export default function BranchMasterPage() {
                   checked={formData.billPrint}
                   onChange={(value) => handleInputChange('billPrint', value)}
                   label="Bill Print"
-                  theme={theme}
+                  theme={themeMode}
                 />
               </MasterFormSection>
 
@@ -499,7 +500,7 @@ export default function BranchMasterPage() {
                 title="Additional Information"
                 columns={1}
                 gap={4}
-                theme={theme}
+                theme={themeMode}
                 className="mt-6"
               >
                 <MasterFormTextarea
@@ -508,7 +509,7 @@ export default function BranchMasterPage() {
                   placeholder="Terms & Conditions"
                   label="Terms & Conditions"
                   rows={3}
-                  theme={theme}
+                  theme={themeMode}
                 />
 
                 <MasterFormInput
@@ -516,7 +517,7 @@ export default function BranchMasterPage() {
                   onChange={(value) => handleInputChange('bankAccount', value)}
                   placeholder="Bank Account"
                   label="Bank Account"
-                  theme={theme}
+                  theme={themeMode}
                   size="sm"
                 />
               </MasterFormSection>

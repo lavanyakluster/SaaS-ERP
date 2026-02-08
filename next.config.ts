@@ -3,6 +3,7 @@ import type { Configuration } from 'webpack';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
 
   webpack: (config: Configuration, options) => {
     const { dev, isServer } = options;

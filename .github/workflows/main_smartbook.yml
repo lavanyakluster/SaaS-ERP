@@ -10,25 +10,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read # Required for actions/checkout
+      contents: read
 
     steps:
-      # Step 1: Checkout code
+      # Checkout repository
       - uses: actions/checkout@v4
 
-      # Step 2: Setup Node.js
-      - name: Set up Node.js
+      # Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      # Step 3: Install dependencies and build Next.js app
+      # Install all dependencies and build Next.js
       - name: Install dependencies and build
         run: |
-          npm install --production
+          npm install
           npm run build
 
-      # Step 4: Upload build artifact
+      # Upload only necessary files for deployment
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
@@ -38,7 +38,7 @@ jobs:
             package.json
             package-lock.json
             public
-            node_modules
+            next.config.js
 
   deploy:
     runs-on: ubuntu-latest
@@ -48,13 +48,13 @@ jobs:
       contents: read
 
     steps:
-      # Step 1: Download artifact from build job
+      # Download artifact from build job
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: nextjs-app
 
-      # Step 2: Login to Azure
+      # Login to Azure
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -62,7 +62,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_95DC1A33973240A3BA47FAE2161EC84D }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FB2B58CDEF07435D98DFBCFDD1BE1FCF }}
 
-      # Step 3: Deploy to Azure Web App
+      # Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:

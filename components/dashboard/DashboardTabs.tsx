@@ -1,8 +1,7 @@
 'use client';
 
 import { LayoutDashboard, TrendingUp, Wallet, Package, Target } from 'lucide-react';
-
-type DashboardType = 'overview' | 'sales' | 'account' | 'item' | 'salekpi';
+import type { DashboardType } from '@/components/dashboard/types';
 
 interface DashboardTab {
   id: DashboardType;
@@ -21,7 +20,7 @@ const tabs: DashboardTab[] = [
   { id: 'sales', label: 'Sales', icon: TrendingUp },
   { id: 'account', label: 'Account', icon: Wallet },
   { id: 'item', label: 'Item', icon: Package },
-  { id: 'salekpi', label: 'Sale KPI', icon: Target },
+  { id: 'sales-kpi', label: 'Sale KPI', icon: Target },
 ];
 
 export function DashboardTabs({ activeTab, onTabChange, isDark }: DashboardTabsProps) {

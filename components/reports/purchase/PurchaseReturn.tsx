@@ -1,34 +1,126 @@
 'use client';
 
-import { useState } from 'react';
-import { Download } from 'lucide-react';
-import { useTheme } from '@/lib/store/theme-store';
-import { CommonReportFilters, type ReportFilters } from '@/components/reports/CommonReportFilters';
-import { usePurchaseReturn } from '@/lib/hooks/usePurchaseReturn';
-import { formatDate } from '@/lib/utils/format';
+// ✅ Hierarchical Row Grouping with Enhanced Features: Branch → GRN
 
-export default function PurchaseReturn() {
+import { useState, useMemo } from 'react';
+import { ChevronRight, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useTheme } from '@/lib/store/theme-store';
+import { usePurchaseReturn } from '@/lib/hooks/usePurchaseReturn';
+import type { PurchaseReturnRecord } from '@/lib/types/purchase-return.types';
+
+interface PurchaseReturnProps {
+  filters: {
+    branchCode: string;
+    fromDate: string;
+    toDate: string;
+  };
+}
+
+// Helper function to get current quarter dates
+const getQuarterDates = (): { fromDate: string; toDate: string } => {
+  const today = new Date();
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  const quarter = Math.floor(today.getMonth() / 3);
+  const quarterStart = new Date(today.getFullYear(), quarter * 3, 1);
+  return { 
+    fromDate: formatDate(quarterStart), 
+    toDate: formatDate(today) 
+  };
+};
+
+// Group data by branch
+interface BranchGroup {
+  branchCode: string;
+  branchName: string;
+  grns: PurchaseReturnRecord[];
+  total: number;
+}
+
+type SortField = 'DocNo' | 'Date' | 'Code' | 'Supplier' | 'RefBillNo' | 'RefBillDate' | 'Branch' | 'Net';
+type SortOrder = 'asc' | 'desc' | null;
+
+export default function PurchaseReturn({ filters }: PurchaseReturnProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // State for filters - updated when Load button is clicked
-  const [filters, setFilters] = useState<ReportFilters>({
-    branchCode: '0',
-    fromDate: new Date().toISOString().split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
-  });
+  // State for expanded branches
+  const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set());
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
 
-  // Fetch purchase return data with dynamic filters
-  const { data: returnData, isLoading } = usePurchaseReturn({
-    fromDt: filters.fromDate,
-    toDt: filters.toDate,
-    brCode: filters.branchCode,
-  });
+  // Use default values if no filters are provided from parent
+  const defaultDates = getQuarterDates();
+  const effectiveFilters = {
+    branchCode: filters.branchCode || '000', // '000' = All Branches
+    fromDate: filters.fromDate || defaultDates.fromDate,
+    toDate: filters.toDate || defaultDates.toDate,
+  };
 
-  // Handle filter changes when Load button is clicked
-  const handleLoadReport = (newFilters: ReportFilters) => {
-    console.log('📊 Purchase Return - Loading with filters:', newFilters);
-    setFilters(newFilters);
+  // Always fetch data with effective filters (defaults or provided)
+  const hasFilters = true; // Always enabled
+
+  // Fetch purchase return master data with effective filters
+  const { data: purchaseReturnData, isLoading } = usePurchaseReturn(
+    {
+      fromDt: effectiveFilters.fromDate,
+      toDt: effectiveFilters.toDate,
+      brCode: effectiveFilters.branchCode,
+    },
+    hasFilters
+  );
+
+  // Group data by branch
+  const branchGroups = useMemo<BranchGroup[]>(() => {
+    if (!purchaseReturnData) return [];
+    
+    const groups = new Map<string, BranchGroup>();
+    
+    purchaseReturnData.forEach(record => {
+      const branchCode = record.Branch.replace(/[PVMAWS]/g, '');
+      
+      if (!groups.has(branchCode)) {
+        groups.set(branchCode, {
+          branchCode,
+          branchName: record.Branch,
+          grns: [],
+          total: 0,
+        });
+      }
+      
+      const group = groups.get(branchCode)!;
+      group.grns.push(record);
+      group.total += record.Net;
+    });
+    
+    return Array.from(groups.values()).sort((a, b) => 
+      a.branchCode.localeCompare(b.branchCode)
+    );
+  }, [purchaseReturnData]);
+
+  // Auto-expand all branches when data loads
+  useMemo(() => {
+    if (branchGroups.length > 0) {
+      const allBranchCodes = new Set(branchGroups.map(g => g.branchCode));
+      setExpandedBranches(allBranchCodes);
+    }
+  }, [branchGroups]);
+
+  // Calculate grand total
+  const grandTotal = useMemo(() => {
+    return branchGroups.reduce((sum, group) => sum + group.total, 0);
+  }, [branchGroups]);
+
+  // Toggle branch expansion
+  const toggleBranch = (branchCode: string) => {
+    const newExpanded = new Set(expandedBranches);
+    if (newExpanded.has(branchCode)) {
+      newExpanded.delete(branchCode);
+    } else {
+      newExpanded.add(branchCode);
+    }
+    setExpandedBranches(newExpanded);
   };
 
   // Format currency
@@ -39,181 +131,190 @@ export default function PurchaseReturn() {
     }).format(amount);
   };
 
-  // Calculate totals
-  const totals = returnData?.reduce(
-    (acc, item) => ({
-      prodValue: acc.prodValue + (item.ProdValue || 0),
-      discount: acc.discount + (item.Discount || 0),
-      tax: acc.tax + (item.Tax || 0),
-      net: acc.net + (item.Net || 0),
-      addAmt: acc.addAmt + (item.AddAmt || 0),
-    }),
-    { prodValue: 0, discount: 0, tax: 0, net: 0, addAmt: 0 }
-  );
+  // Format date
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('en-GB');
+  };
+
+  // Sort GRNs within a branch
+  const sortGRNs = (grns: PurchaseReturnRecord[], field: SortField, order: SortOrder) => {
+    return grns.sort((a, b) => {
+      if (order === 'asc') {
+        return a[field] < b[field] ? -1 : a[field] > b[field] ? 1 : 0;
+      } else if (order === 'desc') {
+        return a[field] > b[field] ? -1 : a[field] < b[field] ? 1 : 0;
+      }
+      return 0;
+    });
+  };
+
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <CommonReportFilters 
-        onLoad={handleLoadReport}
-        defaultFromDate={filters.fromDate}
-        defaultToDate={filters.toDate}
-        defaultBranch={filters.branchCode}
-      />
-
+    <div className="space-y-6 h-full overflow-y-auto pr-2">
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      )}
-
-      {/* Purchase Return Table */}
-      {!isLoading && returnData && returnData.length > 0 && (
-        <div
-          className={`rounded-lg border overflow-hidden ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          }`}
-        >
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10">
-                <tr
-                  className={`${
-                    isDark ? 'bg-gray-900 text-gray-300' : 'bg-blue-600 text-white'
-                  }`}
-                >
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Grn</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Bill No.</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Bill Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Supplier</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">Prod Value</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">Dis</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">Tax</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">Net</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">Expense</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {returnData.map((item, index) => (
-                  <tr
-                    key={`${item.Id}-${index}`}
-                    className={`${
-                      isDark
-                        ? 'hover:bg-gray-700 text-gray-300'
-                        : 'hover:bg-gray-50 text-gray-900'
-                    } transition-colors`}
-                  >
-                    <td className="px-4 py-3 text-sm whitespace-nowrap">
-                      {formatDate(item.Date)}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{item.DocNo}</td>
-                    <td className="px-4 py-3 text-sm">{item.RefBillNo || '-'}</td>
-                    <td className="px-4 py-3 text-sm whitespace-nowrap">
-                      {item.RefBillDate ? formatDate(item.RefBillDate) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm max-w-xs truncate" title={item.Supplier}>
-                      {item.Supplier}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium">
-                      {formatCurrency(item.ProdValue)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {formatCurrency(item.Discount)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {formatCurrency(item.Tax)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-blue-600 dark:text-blue-400">
-                      {formatCurrency(item.Net)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {formatCurrency(item.AddAmt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              {/* Totals Footer */}
-              <tfoot>
-                <tr
-                  className={`font-semibold ${
-                    isDark ? 'bg-gray-900 text-gray-200' : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  <td colSpan={5} className="px-4 py-3 text-sm text-right">
-                    Total:
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {formatCurrency(totals?.prodValue || 0)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {formatCurrency(totals?.discount || 0)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {formatCurrency(totals?.tax || 0)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right text-blue-600 dark:text-blue-400">
-                    {formatCurrency(totals?.net || 0)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right">
-                    {formatCurrency(totals?.addAmt || 0)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* Summary Cards */}
-          <div
-            className={`grid grid-cols-2 md:grid-cols-5 gap-4 p-4 border-t ${
-              isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'
-            }`}
-          >
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Total Returns</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {returnData.length}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Prod Value</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {formatCurrency(totals?.prodValue || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Discount</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {formatCurrency(totals?.discount || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Tax</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {formatCurrency(totals?.tax || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Net Amount</p>
-              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                {formatCurrency(totals?.net || 0)}
-              </p>
-            </div>
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2" />
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              Loading purchase returns...
+            </p>
           </div>
         </div>
       )}
 
-      {/* No Data */}
-      {!isLoading && (!returnData || returnData.length === 0) && (
-        <div
-          className={`text-center py-12 rounded-lg border ${
-            isDark
-              ? 'bg-gray-800 border-gray-700 text-gray-400'
-              : 'bg-white border-gray-200 text-gray-500'
-          }`}
-        >
-          No data available for the selected filters
+      {/* No Data State */}
+      {!isLoading && (!purchaseReturnData || purchaseReturnData.length === 0) && (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              No purchase return data found for the selected filters.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Hierarchical Grouped Table */}
+      {!isLoading && branchGroups.length > 0 && (
+        <div className={`rounded-lg border overflow-hidden shadow-sm ${
+          isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
+          {/* Table Header */}
+          <div className={`grid gap-3 px-4 py-3 font-semibold text-sm border-b ${
+            isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-200 text-gray-700'
+          }`} style={{ gridTemplateColumns: '140px 100px 100px 280px 120px 120px 80px 120px' }}>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('DocNo')}>
+              Doc No.
+              {sortField === 'DocNo' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('Date')}>
+              Date
+              {sortField === 'Date' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('Code')}>
+              Code
+              {sortField === 'Code' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('Supplier')}>
+              Supplier
+              {sortField === 'Supplier' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('RefBillNo')}>
+              Ref Bill No.
+              {sortField === 'RefBillNo' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('RefBillDate')}>
+              Ref Bill Date
+              {sortField === 'RefBillDate' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('Branch')}>
+              Branch
+              {sortField === 'Branch' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+            <div className="text-right flex items-center gap-1 cursor-pointer" onClick={() => handleSort('Net')}>
+              Net Amount
+              {sortField === 'Net' && (
+                sortOrder === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />
+              )}
+            </div>
+          </div>
+
+          {/* Table Body */}
+          <div>
+            {branchGroups.map((group) => (
+              <div key={group.branchCode}>
+                {/* Branch Header Row */}
+                <div
+                  className={`flex items-center justify-between px-4 py-3 cursor-pointer font-semibold border-b ${
+                    isDark
+                      ? 'bg-blue-900/30 hover:bg-blue-900/40 border-gray-700 text-blue-300'
+                      : 'bg-blue-50 hover:bg-blue-100 border-gray-200 text-blue-700'
+                  }`}
+                  onClick={() => toggleBranch(group.branchCode)}
+                >
+                  <div className="flex items-center gap-2">
+                    {expandedBranches.has(group.branchCode) ? (
+                      <ChevronDown className="size-4" />
+                    ) : (
+                      <ChevronRight className="size-4" />
+                    )}
+                    <span>Branch: {group.branchName}</span>
+                  </div>
+                  <div className="text-right">
+                    Total: {formatCurrency(group.total)}
+                  </div>
+                </div>
+
+                {/* GRNs under this branch */}
+                {expandedBranches.has(group.branchCode) && (
+                  <div>
+                    {sortGRNs(group.grns, sortField || 'DocNo', sortOrder || 'asc').map((grn, idx) => {
+                      return (
+                        <div
+                          key={`${grn.Id}-${idx}`}
+                          className={`grid gap-3 px-4 py-2.5 border-b ${
+                            isDark
+                              ? 'hover:bg-gray-700/50 border-gray-700 text-gray-300'
+                              : 'hover:bg-gray-50 border-gray-200 text-gray-700'
+                          }`}
+                          style={{ gridTemplateColumns: '140px 100px 100px 280px 120px 120px 80px 120px' }}
+                        >
+                          <div className="font-medium truncate" title={grn.DocNo}>{grn.DocNo}</div>
+                          <div>{formatDate(grn.Date)}</div>
+                          <div className="truncate" title={grn.Code}>{grn.Code}</div>
+                          <div className="truncate" title={grn.Supplier}>
+                            {grn.Supplier || '-'}
+                          </div>
+                          <div className="truncate" title={grn.RefBillNo}>{grn.RefBillNo || '-'}</div>
+                          <div>{formatDate(grn.RefBillDate)}</div>
+                          <div>{grn.Branch}</div>
+                          <div className="text-right font-semibold">
+                            {formatCurrency(grn.Net)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Grand Total */}
+          <div className={`px-4 py-4 font-bold text-lg border-t ${
+            isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-gray-50 border-gray-200 text-gray-900'
+          }`}>
+            <div className="flex justify-between items-center">
+              <span>Grand Total:</span>
+              <span className="text-blue-600">{formatCurrency(grandTotal)}</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

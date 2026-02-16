@@ -32,6 +32,7 @@ export interface UserDetails {
     allow: string[];
     deny: string[];
   };
+  branches?: string[]; // Branches assigned to user (if API returns this)
 }
 
 export interface CreateUserRequest {
@@ -42,11 +43,30 @@ export interface CreateUserRequest {
     allow: string[];
     deny: string[];
   };
+  Branches: string[];
+  status: boolean;
+}
+
+export interface UpdateUserRequest {
+  name: string;
+  email: string;
+  roleid: string;
+  permissions: {
+    allow: string[];
+    deny: string[];
+  };
+  Branches: string[];
+  // Note: status is NOT included in update requests per API spec
 }
 
 export interface CreateUserResponse {
   status?: string;
   message: string;
+  userId?: string; // ✅ Add userId to response (returned by API after creation)
+  data?: {
+    userId?: string;
+    organizationUserId?: string;
+  };
 }
 
 export interface DeleteUserResponse {
@@ -58,6 +78,15 @@ export interface GetUsersResponse {
   success: boolean;
   data: User[];
   message?: string;
+}
+
+export interface ChangeEmailRequest {
+  NewEmail: string;
+}
+
+export interface ChangeEmailResponse {
+  success?: boolean;
+  message: string;
 }
 
 // ============================================================================
@@ -97,5 +126,25 @@ export const createUser = async (user: CreateUserRequest): Promise<CreateUserRes
  */
 export const deleteUser = async (userId: string): Promise<DeleteUserResponse> => {
   const response = await apiClient.delete<DeleteUserResponse>(`/user/${userId}`);
+  return response.data;
+};
+
+/**
+ * Update a user
+ * @param userId - The user ID to update
+ * @param user - The user details to update
+ */
+export const updateUser = async (userId: string, user: UpdateUserRequest): Promise<CreateUserResponse> => {
+  const response = await apiClient.put<CreateUserResponse>(`/user/${userId}`, user);
+  return response.data;
+};
+
+/**
+ * Change a user's email
+ * @param userId - The user ID to update
+ * @param email - The new email address
+ */
+export const changeEmail = async (userId: string, email: ChangeEmailRequest): Promise<ChangeEmailResponse> => {
+  const response = await apiClient.put<ChangeEmailResponse>(`/ChangeEmail/${userId}`, email);
   return response.data;
 };

@@ -1,7 +1,7 @@
 'use client';
 
 interface HowItWorksSectionProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 const steps = [

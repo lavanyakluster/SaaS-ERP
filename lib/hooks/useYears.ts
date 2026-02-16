@@ -10,25 +10,77 @@ import type { YearsList } from '@/lib/types/year.types';
 
 /**
  * Hook to fetch years list
- * Automatically fetches when user is authenticated
+ * Automatically fetches when user is authenticated AND organization is selected
  */
 export const useYears = () => {
+  // ✅ Get authentication status and organization context
+  const status = useAuthStore((state) => state.status);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
+  const isSwitchingOrganization = useAuthStore((state) => state.isSwitchingOrganization);
+  const selectedOrganization = useAuthStore((state) => state.selectedOrganization);
+  const organizationApiUrl = useAuthStore((state) => state.organizationApiUrl); // ✅ Add this
+  const getAccessToken = useAuthStore((state) => state.getAccessToken);
+  const tokens = useAuthStore((state) => state.tokens);
+  
+  // ✅ CRITICAL: Only consider authenticated if NOT logging out AND NOT switching organizations
+  const isAuthenticated = status === 'authenticated' && !isLoggingOut && !isSwitchingOrganization;
+  
+  // Debug logging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 useYears - Auth Check:', {
+      status,
+      isLoggingOut,
+      isSwitchingOrganization,
+      isAuthenticated,
+      hasToken: !!tokens?.accessToken,
+      hasOrganization: !!selectedOrganization?.id,
+      organizationId: selectedOrganization?.id,
+      organizationName: selectedOrganization?.name,
+      hasOrgApiUrl: !!organizationApiUrl, // ✅ Add this
+      tokenPreview: tokens?.accessToken?.substring(0, 30) + '...',
+      enabled: typeof window !== 'undefined' && 
+        isAuthenticated && 
+        !!tokens?.accessToken && 
+        !!selectedOrganization?.id &&
+        !!organizationApiUrl, // ✅ Add this check
+    });
+  }
+  
   return useQuery<YearsList>({
-    queryKey: ['years'],
+    queryKey: ['years', selectedOrganization?.id],
     queryFn: () => {
       // Get token from auth store
-      const token = useAuthStore.getState().getAccessToken();
+      const token = getAccessToken();
       
       if (!token) {
         throw new Error('No authentication token available');
       }
       
+      if (!selectedOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      
       return fetchYearsList(token);
     },
-    enabled: typeof window !== 'undefined',
-    staleTime: 30 * 60 * 1000, // 30 minutes (years don't change often)
-    gcTime: 60 * 60 * 1000, // 1 hour
+    // ✅ CRITICAL: Only enable when:
+    // 1. Browser environment
+    // 2. User is authenticated (and NOT logging out or switching orgs)
+    // 3. Has valid token in state
+    // 4. Organization is selected
+    // 5. ✅ NEW: Organization switch completed (has API URL)
+    enabled: 
+      typeof window !== 'undefined' && 
+      isAuthenticated && 
+      !!tokens?.accessToken && 
+      !!selectedOrganization?.id &&
+      !!organizationApiUrl, // ✅ CRITICAL FIX: Wait for org switch to complete
+    staleTime: 30 * 60 * 1000, // ⚡ 30 minutes (years don't change often)
+    gcTime: 60 * 60 * 1000, // ⚡ 1 hour
     retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnMount: false, // ⚡ Don't refetch on mount if cached
+    refetchOnWindowFocus: false, // ⚡ Don't refetch on window focus
+    refetchOnReconnect: false, // ⚡ Don't refetch on reconnect
   });
 };
 

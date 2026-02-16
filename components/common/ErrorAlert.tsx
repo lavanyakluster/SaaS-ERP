@@ -3,7 +3,7 @@ import { AlertCircle, X } from 'lucide-react';
 interface ErrorAlertProps {
   message: string;
   onDismiss?: () => void;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   className?: string;
 }
 

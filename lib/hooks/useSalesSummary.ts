@@ -17,9 +17,9 @@ import { useAuthStore } from '@/lib/store/auth-store';
  *   dtt: '2025-01-01',
  *   brcode: '0',
  *   shift: '0'
- * });
+ * }, true);
  */
-export const useSalesSummary = (params: Omit<SalesSummaryParams, 'year'>) => {
+export const useSalesSummary = (params: Omit<SalesSummaryParams, 'year'>, enabled: boolean = true) => {
   const status = useAuthStore((state) => state.status);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const selectedYear = useAuthStore((state) => state.selectedYear);
@@ -34,8 +34,10 @@ export const useSalesSummary = (params: Omit<SalesSummaryParams, 'year'>) => {
       console.log('🚀 Fetching sales summary with year:', selectedYear);
       return getSalesSummary({ ...params, year: selectedYear });
     },
-    enabled: isAuthenticated && !!selectedYear && !!params.dtf && !!params.dtt && !!params.brcode,
-    staleTime: 30000, // 30 seconds
+    enabled: enabled && isAuthenticated && !!selectedYear && !!params.dtf && !!params.dtt && !!params.brcode,
+    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1,
   });
 };
@@ -48,9 +50,9 @@ export const useSalesSummary = (params: Omit<SalesSummaryParams, 'year'>) => {
  *   dtf: '2025-01-01',
  *   dtt: '2025-01-01',
  *   brcode: '0'
- * });
+ * }, true);
  */
-export const useDashSalesSummary = (params: Omit<SalesSummaryParams, 'year' | 'shift'>) => {
+export const useDashSalesSummary = (params: Omit<SalesSummaryParams, 'year' | 'shift'>, enabled: boolean = true) => {
   const status = useAuthStore((state) => state.status);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const selectedYear = useAuthStore((state) => state.selectedYear);
@@ -65,8 +67,10 @@ export const useDashSalesSummary = (params: Omit<SalesSummaryParams, 'year' | 's
       console.log('🚀 Fetching dashboard sales summary with year:', selectedYear);
       return getDashSalesSummary({ ...params, year: selectedYear });
     },
-    enabled: isAuthenticated && !!selectedYear && !!params.dtf && !!params.dtt && !!params.brcode,
-    staleTime: 30000, // 30 seconds
+    enabled: enabled && isAuthenticated && !!selectedYear && !!params.dtf && !!params.dtt && !!params.brcode,
+    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1,
   });
 };

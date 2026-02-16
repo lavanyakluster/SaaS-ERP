@@ -14,7 +14,7 @@ interface MasterFormSelectProps {
   label?: string;
   disabled?: boolean;
   required?: boolean;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }

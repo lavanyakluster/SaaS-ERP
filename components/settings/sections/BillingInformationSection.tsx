@@ -2,10 +2,18 @@
 
 import { CreditCard, Plus, Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useBillingHistory, useDownloadInvoice } from '@/lib/hooks/useSubscription';
-import type { BillingHistory } from '@/lib/api/subscription.api';
 
 interface BillingInformationSectionProps {
   isDark: boolean;
+}
+
+interface BillingHistoryItem {
+  id: string;
+  invoiceNumber: string;
+  date: string;
+  description: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'failed' | 'refunded';
 }
 
 export function BillingInformationSection({ isDark }: BillingInformationSectionProps) {
@@ -46,54 +54,50 @@ export function BillingInformationSection({ isDark }: BillingInformationSectionP
     },
   ];
 
-  // Use API data if available, otherwise use mock data
-  const fallbackBillingHistory: BillingHistory[] = [
+  const fallbackBillingHistory: BillingHistoryItem[] = [
     {
-      invoiceId: '1',
+      id: '1',
       invoiceNumber: 'INV-2024-001',
       date: '2024-01-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      currency: 'AED',
-      status: 'paid',
+      status: 'paid' as const,
     },
     {
-      invoiceId: '2',
+      id: '2',
       invoiceNumber: 'INV-2023-012',
       date: '2023-12-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      currency: 'AED',
-      status: 'paid',
+      status: 'paid' as const,
     },
     {
-      invoiceId: '3',
+      id: '3',
       invoiceNumber: 'INV-2023-011',
       date: '2023-11-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      currency: 'AED',
-      status: 'paid',
+      status: 'paid' as const,
     },
     {
-      invoiceId: '4',
+      id: '4',
       invoiceNumber: 'INV-2023-010',
       date: '2023-10-27',
       description: 'Professional Plan - Monthly',
       amount: 599,
-      currency: 'AED',
-      status: 'paid',
+      status: 'paid' as const,
     },
   ];
 
-  const invoices = (billingHistoryData ?? fallbackBillingHistory).map((invoice) => ({
-    id: invoice.invoiceNumber || invoice.invoiceId,
-    invoiceNumber: invoice.invoiceNumber,
-    date: invoice.date,
-    description: invoice.description,
-    amount: invoice.amount,
-    status: invoice.status,
-  }));
+  const billingHistory: BillingHistoryItem[] =
+    billingHistoryData?.map((invoice) => ({
+      id: invoice.invoiceId,
+      invoiceNumber: invoice.invoiceNumber,
+      date: invoice.date,
+      description: invoice.description,
+      amount: invoice.amount,
+      status: invoice.status,
+    })) ?? fallbackBillingHistory;
 
   // ============================================================================
   // EVENT HANDLERS
@@ -299,7 +303,7 @@ export function BillingInformationSection({ isDark }: BillingInformationSectionP
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
+              {billingHistory.map((invoice) => (
                 <tr
                   key={invoice.id}
                   className={`border-b ${
@@ -360,7 +364,7 @@ export function BillingInformationSection({ isDark }: BillingInformationSectionP
           </table>
         </div>
 
-        {invoices.length === 0 && (
+        {billingHistory.length === 0 && (
           <div className="text-center py-12">
             <div
               className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${

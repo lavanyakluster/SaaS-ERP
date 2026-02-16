@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Mail, User, Shield, Clock, Loader2, Building2 } from 'lucide-react';
-import { ADDITIONAL_PERMISSIONS, OFF_DAY_OPTIONS } from '@/config/permissions';
+import React, { useState, useEffect } from 'react';
+import { X, Mail, User, Shield, Clock, Loader2 } from 'lucide-react';
+import { ADDITIONAL_PERMISSIONS, OFF_DAY_OPTIONS } from '@/lib/constants/permissions';
 import { PermissionsPanel } from './PermissionsPanel';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useRoles, useRoleById } from '@/lib/hooks/useRoles';
-import { useUserById, useCreateUser } from '@/lib/hooks/useUsers';
+import { useUserById, useCreateUser, useUpdateUser } from '@/lib/hooks/useUsers';
 import { useBranches } from '@/lib/hooks';
 import { parseAdditionalPermissionsFromApi } from '@/lib/utils/permissions';
+import { changeEmail } from '@/lib/api/users.api';
 import { toast } from 'sonner';
 
 interface AddUserModalProps {
@@ -39,6 +40,9 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
   
   // Create user mutation
   const createUserMutation = useCreateUser();
+  
+  // Update user mutation
+  const updateUserMutation = useUpdateUser();
   
   // Initialize with first role if available
   const initialRole = rolesData?.data?.[0]?.id || '';
@@ -83,12 +87,19 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         timeTo: '18:00',
         offDay: 'none',
       });
+      
+      // Reset permissions and branches
+      handlers.setModulePermissions({});
+      handlers.setBranches([]);
     }
   }, [isOpen, userId, rolesData?.data]);
 
   // Load user data in edit mode
   useEffect(() => {
     if (userData && userId && isOpen) {
+      console.log('📝 Loading user data for edit:', userData);
+      console.log('📝 Full user data object:', JSON.stringify(userData, null, 2));
+      
       setFormData({
         name: userData.name,
         email: userData.email,
@@ -100,6 +111,53 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         timeTo: '18:00',
         offDay: 'none',
       });
+
+      // Parse permissions and set module permissions
+      const allowPermissions = userData.permissions?.allow || [];
+      
+      // Convert API permissions back to module permissions format
+      const modulePerms: Record<string, { add: boolean; view: boolean; edit: boolean; delete: boolean }> = {};
+      
+      allowPermissions.forEach(perm => {
+        const parts = perm.split('_');
+        if (parts.length === 2) {
+          const module = parts[0].toLowerCase();
+          const action = parts[1].toLowerCase();
+          
+          if (!modulePerms[module]) {
+            modulePerms[module] = { add: false, view: false, edit: false, delete: false };
+          }
+          
+          if (action === 'view') modulePerms[module].view = true;
+          else if (action === 'create') modulePerms[module].add = true;
+          else if (action === 'update') modulePerms[module].edit = true;
+          else if (action === 'delete') modulePerms[module].delete = true;
+        }
+      });
+
+      // Update permissions state
+      handlers.setModulePermissions(modulePerms);
+
+      // Load branches if available (handle both 'branches' and 'Branches')
+      const userBranches = userData.branches || (userData as any).Branches || [];
+      console.log('🌿 User branches from API (raw):', userBranches);
+      console.log('🌿 Type of branches:', typeof userBranches, Array.isArray(userBranches));
+      console.log('🌿 Branches length:', userBranches.length);
+      console.log('🌿 First branch (if exists):', userBranches[0]);
+      
+      if (userBranches && Array.isArray(userBranches) && userBranches.length > 0) {
+        console.log('✅ Setting branches:', userBranches);
+        handlers.setBranches(userBranches);
+      } else {
+        // Reset to empty if no branches
+        console.log('⚠️ No branches found, resetting to empty array');
+        handlers.setBranches([]);
+      }
+      
+      // Log final state after setting
+      setTimeout(() => {
+        console.log('🔍 Final selected branches state:', permissions.selectedBranches);
+      }, 100);
     }
   }, [userData, userId, isOpen]);
 
@@ -134,12 +192,12 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
 
   const handleSave = async () => {
     // Validation
-    if (!formData.name.trim()) {
+    if (!formData.name || typeof formData.name !== 'string' || !formData.name.trim()) {
       toast.error('Please enter a name');
       return;
     }
     
-    if (!formData.email.trim()) {
+    if (!formData.email || typeof formData.email !== 'string' || !formData.email.trim()) {
       toast.error('Please enter an email');
       return;
     }
@@ -161,17 +219,76 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       if (perms.delete) allowPermissions.push(`${module.toUpperCase()}_DELETE`);
     });
 
-    // Create the user via API
+    // Create or update the user via API
     try {
-      const result = await createUserMutation.mutateAsync({
-        name: formData.name,
-        email: formData.email,
-        roleid: formData.role,
-        permissions: {
-          allow: allowPermissions,
-          deny: denyPermissions,
-        },
-      });
+      let result;
+      let createdOrUpdatedUserId: string;
+      
+      if (isEditMode) {
+        // Update user (without status field)
+        result = await updateUserMutation.mutateAsync({
+          userId: userId,
+          userData: {
+            name: formData.name,
+            email: formData.email,
+            roleid: formData.role,
+            permissions: {
+              allow: allowPermissions,
+              deny: denyPermissions,
+            },
+            Branches: permissions.selectedBranches,
+          }
+        });
+        
+        createdOrUpdatedUserId = userId;
+        
+        // Check if email was changed in edit mode
+        if (userData && formData.email !== userData.email) {
+          console.log('📧 Email changed in edit mode, calling ChangeEmail API...');
+          try {
+            await changeEmail(userId, { NewEmail: formData.email });
+            console.log('✅ Email changed successfully');
+            toast.success('Email updated successfully');
+          } catch (emailError: any) {
+            console.error('❌ Failed to change email:', emailError);
+            // Show warning but don't fail the entire update
+            toast.error('User updated but email change failed. Please try again.');
+          }
+        }
+      } else {
+        // Create user (with status field)
+        result = await createUserMutation.mutateAsync({
+          name: formData.name,
+          email: formData.email,
+          roleid: formData.role,
+          permissions: {
+            allow: allowPermissions,
+            deny: denyPermissions,
+          },
+          Branches: permissions.selectedBranches,
+          status: true,
+        });
+        
+        console.log('📝 Create user response:', result);
+        
+        // Extract userId from response (try multiple possible locations)
+        const newUserId = result.userId || result.data?.userId || result.data?.organizationUserId;
+        
+        if (newUserId) {
+          console.log('📧 Triggering ChangeEmail API for newly created user:', newUserId);
+          try {
+            const emailChangeResult = await changeEmail(newUserId, { NewEmail: formData.email });
+            console.log('✅ ChangeEmail API called successfully after user creation:', emailChangeResult);
+          } catch (emailError: any) {
+            console.error('❌ Failed to call ChangeEmail after user creation:', emailError);
+            // Log but don't show error to user as user was created successfully
+            console.warn('User created but email confirmation email may not have been sent');
+          }
+        } else {
+          console.warn('⚠️ Could not extract userId from create response, skipping ChangeEmail API');
+          console.warn('Response structure:', JSON.stringify(result, null, 2));
+        }
+      }
 
       // Check if the email already exists
       if (result.status === 'exists') {
@@ -179,10 +296,10 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         return;
       }
 
-      toast.success(result.message || 'User created successfully');
+      toast.success(result.message || (isEditMode ? 'User updated successfully' : 'User created successfully'));
       onClose();
     } catch (error: any) {
-      console.error('Failed to create user:', error);
+      console.error('Failed to create/update user:', error);
       
       // Handle specific error messages
       if (error.response?.data?.message) {
@@ -190,7 +307,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       } else if (error.response?.data?.status === 'exists') {
         toast.error('Email already exists for this tenant');
       } else {
-        toast.error('Failed to create user. Please try again.');
+        toast.error(isEditMode ? 'Failed to update user. Please try again.' : 'Failed to create user. Please try again.');
       }
     }
   };
@@ -483,10 +600,6 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm">
             <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               <span className="font-semibold text-blue-500">{permissions.selectedBranches.length}</span> branches
-            </div>
-            <div className={`w-1 h-1 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
-            <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <span className="font-semibold text-purple-500">{permissions.selectedLedgers.length}</span> ledgers
             </div>
             <div className={`w-1 h-1 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
             <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>

@@ -225,7 +225,7 @@ export const useMetrics = (
           },
         ];
 
-      case 'salekpi':
+      case 'sales-kpi':
         // TODO: Replace with real sales KPI API data
         return [
           {

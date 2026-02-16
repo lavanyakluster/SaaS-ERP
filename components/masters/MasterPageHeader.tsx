@@ -10,7 +10,7 @@ interface MasterPageHeaderProps {
     via: string;
     to: string;
   };
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   className?: string;
   // Action buttons
   onSave?: () => void;

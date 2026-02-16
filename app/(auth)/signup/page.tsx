@@ -32,7 +32,7 @@ interface FormErrors {
   general?: string;
 }
 
-type SocialProvider = 'microsoft';
+type SocialProvider = 'google' | 'microsoft';
 
 // ============================================================================
 // CONSTANTS
@@ -51,8 +51,7 @@ const PASSWORD_REQUIREMENTS = [
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { theme, isDark } = useTheme();
-  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
+  const { theme } = useTheme();
   
   // Form state
   const [mounted, setMounted] = useState(false);
@@ -220,33 +219,33 @@ export default function SignUpPage() {
 
   return (
     <div className={`min-h-screen flex ${
-      isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+      theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
     }`}>
       {/* Enterprise Carousel Section - Left Side */}
       <div className="hidden lg:block lg:w-1/2 xl:w-[55%] relative overflow-hidden min-h-screen">
-        <EnterpriseCarousel theme={themeMode} />
+        <EnterpriseCarousel theme={theme} />
       </div>
 
       {/* Sign Up Form Section - Right Side - ULTRA COMPACT */}
       <div className={`flex-1 flex items-center justify-center p-3 lg:p-6 min-h-screen ${
-        isDark ? 'bg-gray-900' : 'bg-white'
+        theme === 'dark' ? 'bg-gray-900' : 'bg-white'
       }`}>
         <div className="w-full max-w-md">
           {/* Compact Card */}
           <div className={`rounded-2xl shadow-xl border p-5 lg:p-6 ${
-            isDark 
+            theme === 'dark' 
               ? 'bg-gray-800 border-gray-700' 
               : 'bg-white border-gray-200'
           }`}>
             {/* Header - Ultra Compact */}
             <div className="text-center mb-4">
               <h1 className={`text-xl font-bold mb-1 ${
-                isDark ? 'text-white' : 'text-gray-900'
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
                 Create your account
               </h1>
               <p className={`text-xs ${
-                isDark ? 'text-gray-400' : 'text-gray-600'
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 Start your 14-day free trial • No credit card required
               </p>
@@ -258,7 +257,7 @@ export default function SignUpPage() {
                 <AlertMessage 
                   type="error" 
                   message={errors.general}
-                  theme={themeMode}
+                  theme={theme}
                 />
               </div>
             )}
@@ -266,15 +265,14 @@ export default function SignUpPage() {
             {/* Social Sign Up - Compact */}
             <div className="mb-3">
               <SocialAuthButtons
-                theme={themeMode}
+                theme={theme}
                 disabled={isLoading}
-                isLoading={socialLoading}
-                microsoftLoading={socialLoading === 'microsoft'}
+                isLoading={socialLoading === 'microsoft'}
                 onMicrosoftClick={() => handleSocialLogin('microsoft')}
               />
             </div>
 
-            <FormDivider theme={themeMode} />
+            <FormDivider theme={theme} />
 
             {/* Sign Up Form - Ultra Compact */}
             <form onSubmit={handleSubmit} className="space-y-3" noValidate>
@@ -288,7 +286,7 @@ export default function SignUpPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 error={errors.fullName}
-                theme={themeMode}
+                theme={theme}
                 required
                 disabled={isLoading}
                 autoComplete="name"
@@ -304,7 +302,7 @@ export default function SignUpPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 error={errors.email}
-                theme={themeMode}
+                theme={theme}
                 required
                 disabled={isLoading}
                 autoComplete="email"
@@ -320,7 +318,7 @@ export default function SignUpPage() {
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
                 error={errors.password}
-                theme={themeMode}
+                theme={theme}
                 required
                 disabled={isLoading}
                 autoComplete="new-password"
@@ -329,7 +327,7 @@ export default function SignUpPage() {
               {/* Password Requirements - Ultra Compact */}
               {(passwordFocused || password.length > 0) && (
                 <div className={`p-2 rounded-lg border text-xs ${
-                  isDark 
+                  theme === 'dark' 
                     ? 'bg-gray-900/50 border-gray-700' 
                     : 'bg-gray-50 border-gray-200'
                 }`}>
@@ -342,7 +340,7 @@ export default function SignUpPage() {
                           className={`flex items-center gap-1 ${
                             isValid 
                               ? 'text-green-600 dark:text-green-400' 
-                              : isDark ? 'text-gray-500' : 'text-gray-400'
+                              : theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
                           }`}
                         >
                           <CheckCircle2 className={`w-2.5 h-2.5 flex-shrink-0 ${
@@ -364,7 +362,7 @@ export default function SignUpPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 error={errors.confirmPassword}
-                theme={themeMode}
+                theme={theme}
                 required
                 disabled={isLoading}
                 autoComplete="new-password"
@@ -388,7 +386,7 @@ export default function SignUpPage() {
                   <label
                     htmlFor="terms"
                     className={`text-[10px] cursor-pointer select-none leading-tight ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
                     I agree to the{' '}
@@ -427,7 +425,7 @@ export default function SignUpPage() {
 
             {/* Sign In Link - Ultra Compact */}
             <p className={`text-center text-[10px] mt-4 ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
               Already have an account?{' '}
               <Link 
@@ -441,7 +439,7 @@ export default function SignUpPage() {
 
           {/* Trust Badge - Ultra Compact */}
           <div className={`text-center mt-3 text-[10px] ${
-            isDark ? 'text-gray-500' : 'text-gray-500'
+            theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
           }`}>
             🔒 Secure • 256-bit encryption • GDPR compliant
           </div>

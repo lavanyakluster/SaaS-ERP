@@ -1,7 +1,7 @@
 'use client';
 
 interface CTASectionProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function CTASection({ theme = 'light' }: CTASectionProps) {

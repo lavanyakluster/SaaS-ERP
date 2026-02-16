@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, getUserById, createUser, deleteUser, CreateUserRequest } from '@/lib/api/users.api';
+import { getUsers, getUserById, createUser, deleteUser, updateUser, CreateUserRequest, UpdateUserRequest } from '@/lib/api/users.api';
 
 /**
  * Hook to fetch all users
@@ -13,7 +13,8 @@ export const useUsers = () => {
   return useQuery({
     queryKey: ['users'],
     queryFn: getUsers,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // ⚡ 5 minutes cache
+    gcTime: 10 * 60 * 1000, // 🗑️ 10 minutes garbage collection
     refetchOnWindowFocus: true,
   });
 };
@@ -26,7 +27,8 @@ export const useUserById = (userId: string | null) => {
     queryKey: ['user', userId],
     queryFn: () => getUserById(userId!),
     enabled: !!userId, // Only fetch when userId is provided
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // ⚡ 5 minutes cache
+    gcTime: 10 * 60 * 1000, // 🗑️ 10 minutes garbage collection
   });
 };
 
@@ -53,6 +55,21 @@ export const useDeleteUser = () => {
 
   return useMutation({
     mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: () => {
+      // Invalidate and refetch users list
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+/**
+ * Hook to update a user
+ */
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { userId: string, userData: UpdateUserRequest }) => updateUser(data.userId, data.userData),
     onSuccess: () => {
       // Invalidate and refetch users list
       queryClient.invalidateQueries({ queryKey: ['users'] });

@@ -2,7 +2,7 @@ interface TermsCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   error?: string;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   termsLabel?: string;
   privacyLabel?: string;
   termsLink?: string;

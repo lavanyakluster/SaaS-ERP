@@ -1,4 +1,4 @@
-export type DashboardType = 'overview' | 'sales' | 'account' | 'item' | 'salekpi';
+export type DashboardType = 'overview' | 'sales' | 'account' | 'item' | 'sales-kpi' | 'loyalty' | 'sales-target';
 export type WidgetSize = 'small' | 'medium' | 'large' | 'full';
 
 export interface Widget {

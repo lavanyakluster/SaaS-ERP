@@ -1,7 +1,21 @@
+/**
+ * Modern Sales KPI Dashboard Component
+ * 
+ * ✅ Enterprise Features:
+ * - Real API integration with sales KPI data
+ * - TanStack Table for branch sales table
+ * - Professional KPI cards
+ * - Branch report modal with ECharts
+ * - Trend indicators
+ * - Multi-tenant architecture
+ */
+
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Eye, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Eye } from 'lucide-react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { DataTable } from '@/components/ui/data-table';
 import { BranchReportWidget } from './BranchReportWidget';
 import { useSalesKpi } from '@/lib/hooks/useSalesKpi';
 
@@ -27,9 +41,6 @@ interface BranchReportData {
 }
 
 export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPIDashboardProps) {
-  const [showRowsDropdown, setShowRowsDropdown] = useState(false);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedBranchReport, setSelectedBranchReport] = useState<BranchReportData | null>(null);
 
@@ -88,14 +99,10 @@ export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPI
     };
   }, [salesKpiData]);
 
-  // ✅ Format revenue for display
-  const formatRevenue = (value: number): string => {
-    if (value >= 1000000) {
-      return `AED ${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `AED ${(value / 1000).toFixed(0)}K`;
-    }
-    return `AED ${value.toFixed(0)}`;
+  // ✅ Format number
+  const formatNumber = (num: number | null | undefined): string => {
+    if (num == null || isNaN(num)) return '0.00';
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   // ✅ Branch Sales Table Data - Using Real API Data
@@ -107,11 +114,11 @@ export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPI
     return salesKpiData.map(item => ({
       branch: item.branch,
       todaySales: item.todaySales,
-      todayTrend: item.dayPerc ?? 0, // ✅ Null-safe with fallback to 0
+      todayTrend: item.dayPerc ?? 0,
       monthSales: item.thisMonthSales,
-      monthTrend: item.monthPerc ?? 0, // ✅ Null-safe with fallback to 0
+      monthTrend: item.monthPerc ?? 0,
       yearSales: item.thisYearSales,
-      yearTrend: item.yearPerc ?? 0, // ✅ Null-safe with fallback to 0
+      yearTrend: item.yearPerc ?? 0,
       // Additional data for modal
       yesterdaySales: item.yesterdaySales,
       forecastNextDay: item.forecastNextDay,
@@ -122,25 +129,120 @@ export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPI
     }));
   }, [salesKpiData]);
 
-  const totalPages = Math.ceil(branchSalesData.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = startIndex + rowsPerPage;
-  const currentData = branchSalesData.slice(startIndex, endIndex);
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const TrendIndicator = ({ value }: { value: number }) => {
-    if (value === 0) return <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>-</span>;
-    const isPositive = value > 0;
-    return (
-      <div className={`flex items-center gap-1 ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-        {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-        <span className="text-xs font-semibold">{isPositive ? '+' : ''}{value.toFixed(1)}%</span>
-      </div>
-    );
-  };
+  // TanStack Table columns
+  const columns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'branch',
+      header: 'Branch',
+      cell: ({ getValue }) => (
+        <div className="text-left font-semibold pl-2">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'todaySales',
+      header: 'Today Sales',
+      cell: ({ row }) => {
+        const value = row.original.todaySales ?? 0;
+        const trend = row.original.todayTrend ?? 0;
+        const isPositive = trend >= 0;
+        return (
+          <div className="flex items-center justify-end gap-2 pr-2">
+            <span className="font-medium">{formatNumber(value)}</span>
+            {trend !== 0 && (
+              <div className={`flex items-center ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                {isPositive ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <TrendingDown className="w-3.5 h-3.5" />
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'monthSales',
+      header: 'This Month Sales',
+      cell: ({ row }) => {
+        const value = row.original.monthSales ?? 0;
+        const trend = row.original.monthTrend ?? 0;
+        const isPositive = trend >= 0;
+        return (
+          <div className="flex items-center justify-end gap-2 pr-2">
+            <span className="font-medium">{formatNumber(value)}</span>
+            {trend !== 0 && (
+              <div className={`flex items-center ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                {isPositive ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <TrendingDown className="w-3.5 h-3.5" />
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'yearSales',
+      header: 'This Year Sales',
+      cell: ({ row }) => {
+        const value = row.original.yearSales ?? 0;
+        const trend = row.original.yearTrend ?? 0;
+        const isPositive = trend >= 0;
+        return (
+          <div className="flex items-center justify-end gap-2 pr-2">
+            <span className="font-medium">{formatNumber(value)}</span>
+            {trend !== 0 && (
+              <div className={`flex items-center ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                {isPositive ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <TrendingDown className="w-3.5 h-3.5" />
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'report',
+      header: 'Report',
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              setSelectedBranchReport({
+                branch: row.original.branch,
+                todaySales: row.original.todaySales,
+                yesterdaySales: row.original.yesterdaySales,
+                forecastNextDay: row.original.forecastNextDay,
+                dayChange: row.original.todayTrend,
+                thisMonthSales: row.original.monthSales,
+                lastMonthSales: row.original.lastMonthSales,
+                forecastNextMonth: row.original.forecastNextMonth,
+                monthChange: row.original.monthTrend,
+                thisYearSales: row.original.yearSales,
+                lastYearSales: row.original.lastYearSales,
+                forecastNextYear: row.original.forecastNextYear,
+                yearChange: row.original.yearTrend,
+              });
+              setShowReportModal(true);
+            }}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+              isDark 
+                ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
+          >
+            Report
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   // ✅ Show loading state
   if (isLoading) {
@@ -179,7 +281,7 @@ export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPI
 
   return (
     <div className="space-y-6">
-      {/* ✅ Summary Widgets from Screenshot */}
+      {/* ✅ Summary Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Branch Sales Summary */}
         <div className={`relative overflow-hidden rounded-lg p-4 ${isDark ? 'bg-purple-500/20 border border-purple-500/30' : 'bg-purple-100 border border-purple-200'}`}>
@@ -264,244 +366,40 @@ export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPI
         </div>
       </div>
 
-      {/* Branch Sales Table */}
-      <div
-        className={`rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-lg ${
-          isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-        }`}
-        style={{ animation: 'fadeInUp 0.5s ease-out 0.3s both' }}
-      >
-        {/* Table Header */}
-        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-          <div>
-            <h3 className={`font-semibold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Branch-wise Sales Report
-            </h3>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Showing {startIndex + 1}-{Math.min(endIndex, branchSalesData.length)} of {branchSalesData.length} branches
-            </p>
-          </div>
-          
-          {/* Rows Per Page */}
-          <div className="flex items-center gap-3">
-            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Rows:</span>
-            <div className="relative">
-              <button
-                onClick={() => setShowRowsDropdown(!showRowsDropdown)}
-                className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-all ${
-                  isDark
-                    ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                    : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                {rowsPerPage}
-                <ChevronDown className="w-4 h-4" />
-              </button>
-
-              {showRowsDropdown && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowRowsDropdown(false)} />
-                  <div
-                    className={`absolute right-0 top-10 rounded-lg border shadow-xl z-20 py-1 min-w-[80px] animate-in fade-in slide-in-from-top-2 duration-150 ${
-                      isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    {[5, 10, 20, 50].map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => {
-                          setRowsPerPage(size);
-                          setCurrentPage(1);
-                          setShowRowsDropdown(false);
-                        }}
-                        className={`w-full px-4 py-2 text-left text-sm transition-all ${
-                          rowsPerPage === size
-                            ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'
-                            : isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+      {/* Branch Sales Table (TanStack Table) */}
+      <div className={`rounded-xl overflow-hidden ${
+        isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-sm'
+      }`}>
+        <div className={`px-6 py-4 border-b ${
+          isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+        }`}>
+          <h3 className={`font-sans text-base font-semibold ${
+            isDark ? 'text-white' : 'text-gray-900'
+          }`}>
+            Branch-wise Sales Report
+          </h3>
+          <p className={`font-sans text-xs mt-0.5 ${
+            isDark ? 'text-gray-400' : 'text-gray-500'
+          }`}>
+            {branchSalesData.length} branches with sales performance trends
+          </p>
         </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className={isDark ? 'bg-gray-700/50' : 'bg-gray-50'}>
-              <tr>
-                <th className={`text-left p-3 font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Branch</th>
-                <th className={`text-right p-3 font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Today Sales</th>
-                <th className={`text-right p-3 font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Month Sales</th>
-                <th className={`text-right p-3 font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Year Sales</th>
-                <th className={`text-center p-3 font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentData.map((row, index) => (
-                <tr
-                  key={row.branch}
-                  className={`border-t transition-all duration-200 hover:scale-[1.01] ${
-                    isDark ? 'border-gray-700 hover:bg-gray-700/30' : 'border-gray-100 hover:bg-gray-50'
-                  }`}
-                  style={{ animation: `slideUp 0.3s ease-out ${index * 0.05}s both` }}
-                >
-                  <td className={`p-3 font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{row.branch}</td>
-                  <td className={`p-3 text-right`}>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {formatNumber(row.todaySales)}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        {(row.todayTrend ?? 0) >= 0 ? (
-                          <>
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                            <span className="text-xs font-semibold text-emerald-500">
-                              +{(row.todayTrend ?? 0).toFixed(1)}%
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <TrendingDown className="w-3.5 h-3.5 text-red-500" />
-                            <span className="text-xs font-semibold text-red-500">
-                              {(row.todayTrend ?? 0).toFixed(1)}%
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className={`p-3 text-right`}>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {formatNumber(row.monthSales)}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        {(row.monthTrend ?? 0) >= 0 ? (
-                          <>
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                            <span className="text-xs font-semibold text-emerald-500">
-                              +{(row.monthTrend ?? 0).toFixed(1)}%
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <TrendingDown className="w-3.5 h-3.5 text-red-500" />
-                            <span className="text-xs font-semibold text-red-500">
-                              {(row.monthTrend ?? 0).toFixed(1)}%
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className={`p-3 text-right`}>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {formatNumber(row.yearSales)}
-                      </span>
-                      <div className="flex items-center gap-0.5">
-                        {(row.yearTrend ?? 0) >= 0 ? (
-                          <>
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                            <span className="text-xs font-semibold text-emerald-500">
-                              +{(row.yearTrend ?? 0).toFixed(1)}%
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <TrendingDown className="w-3.5 h-3.5 text-red-500" />
-                            <span className="text-xs font-semibold text-red-500">
-                              {(row.yearTrend ?? 0).toFixed(1)}%
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3 text-center">
-                    <button
-                      className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
-                        isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-                      }`}
-                      title="View Details"
-                      onClick={() => {
-                        const todaySales = row.todaySales;
-                        const yesterdaySales = row.yesterdaySales;
-                        const forecastNextDay = row.forecastNextDay;
-                        
-                        const thisMonthSales = row.monthSales;
-                        const lastMonthSales = row.lastMonthSales;
-                        const forecastNextMonth = row.forecastNextMonth;
-                        
-                        const thisYearSales = row.yearSales;
-                        const lastYearSales = row.lastYearSales;
-                        const forecastNextYear = row.forecastNextYear;
-                        
-                        setSelectedBranchReport({
-                          branch: row.branch,
-                          todaySales: todaySales,
-                          yesterdaySales: yesterdaySales,
-                          forecastNextDay: forecastNextDay,
-                          dayChange: row.todayTrend,
-                          thisMonthSales: thisMonthSales,
-                          lastMonthSales: lastMonthSales,
-                          forecastNextMonth: forecastNextMonth,
-                          monthChange: row.monthTrend,
-                          thisYearSales: thisYearSales,
-                          lastYearSales: lastYearSales,
-                          forecastNextYear: forecastNextYear,
-                          yearChange: row.yearTrend,
-                        });
-                        setShowReportModal(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="p-6">
+          <DataTable
+            columns={columns}
+            data={branchSalesData}
+            isDark={isDark}
+            height="700px"
+            enablePagination={true}
+            enableSorting={true}
+            enableFiltering={true}
+            enableColumnPinning={true}
+            enableColumnReordering={true}
+            enableColumnResizing={true}
+            enableGlobalFilter={true}
+            pageSize={15}
+          />
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className={`flex items-center justify-between p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                currentPage === 1
-                  ? isDark ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : isDark ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Previous
-            </button>
-
-            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                currentPage === totalPages
-                  ? isDark ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : isDark ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Branch Report Modal */}
@@ -513,41 +411,6 @@ export function ModernSalesKPIDashboard({ isDark, onFullscreen }: ModernSalesKPI
           isDark={isDark}
         />
       )}
-
-      <style jsx>{`
-        @keyframes slideInRight {
-          from {
-            opacity: 0;
-            transform: translateX(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

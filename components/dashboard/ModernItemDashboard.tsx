@@ -1,15 +1,25 @@
+/**
+ * Modern Item Dashboard Component
+ * 
+ * ✅ Enterprise Features:
+ * - Real pharmacy API integration
+ * - Apache ECharts for item visualizations
+ * - TanStack Table for item analysis and expiry tables
+ * - ABC Classification with custom SVG donut
+ * - Professional KPI cards
+ * - Multi-tenant architecture
+ */
+
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Package, TrendingUp, ShoppingCart, AlertTriangle, Download, ChevronDown, ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { Package, TrendingUp, ShoppingCart, AlertTriangle, Download, X, Maximize2, ChevronDown } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
+import type { ColumnDef } from '@tanstack/react-table';
+import { DataTable } from '@/components/ui/data-table';
 import { usePharmacyItemDashboard } from '@/lib/hooks/usePharmacyItemDashboard';
-
-interface Branch {
-  branchCode?: string;
-  branchName?: string;
-  bR_COD?: string;
-  bR_NM?: string;
-}
+import type { Branch } from '@/lib/api/branch.api';
 
 interface ModernItemDashboardProps {
   isDark: boolean;
@@ -33,21 +43,39 @@ export function ModernItemDashboard({
   const [chartView, setChartView] = useState<'revenue' | 'quantity'>('quantity');
   const [topItemsCount, setTopItemsCount] = useState(10);
   const [tableTab, setTableTab] = useState<'item-analysis' | 'short-expiry'>('item-analysis');
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [expiryPerPage, setExpiryPerPage] = useState(10);
-  const [expiryCurrentPage, setExpiryCurrentPage] = useState(1);
   const [brandSupplierTab, setBrandSupplierTab] = useState<'brand' | 'supplier'>('brand');
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'spline'>('bar');
+  const [brandChartType, setBrandChartType] = useState<'bar' | 'line' | 'area' | 'spline'>('bar');
+  const [showChartTypeDropdown, setShowChartTypeDropdown] = useState(false);
   const [selectedABCClass, setSelectedABCClass] = useState<'A' | 'B' | 'C' | null>(null);
   const [showABCModal, setShowABCModal] = useState(false);
+  const [showTopItemsModal, setShowTopItemsModal] = useState(false);
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Scroll to table section when "View" is clicked
-  const handleScrollToTable = () => {
-    const tableElement = document.getElementById('item-data-table');
-    if (tableElement) {
-      tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // ✅ Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowChartTypeDropdown(false);
+      }
+    };
+
+    if (showChartTypeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showChartTypeDropdown]);
+
+  // ✅ Open fullscreen modal when "View" is clicked
+  const handleOpenTopItemsModal = () => {
+    setShowTopItemsModal(true);
+  };
+
+  const handleCloseTopItemsModal = () => {
+    setShowTopItemsModal(false);
   };
 
   // ✅ Helper function to format dates
@@ -75,7 +103,6 @@ export function ModernItemDashboard({
     
     switch (dateRange) {
       case 'Today':
-        // No change to fromDate
         break;
       case 'This Week':
         fromDate.setDate(today.getDate() - 7);
@@ -101,23 +128,22 @@ export function ModernItemDashboard({
   // ✅ Get branch code from selected branch
   const branchCode = useMemo(() => {
     if (selectedBranch === 'All Branches' || !selectedBranch) {
-      // ✅ For "All Branches", use the first branch code or default
       if (branches && branches.length > 0) {
         const firstBranch = branches[0];
-        return firstBranch.branchCode || firstBranch.bR_COD || '016'; // Default to '016' if not found
+        return firstBranch.bR_COD || '016';
       }
-      return '016'; // Fallback default branch code
+      return '016';
     }
     
-    const branch = branches.find(b => b.branchName === selectedBranch || b.bR_NM === selectedBranch);
-    return branch?.branchCode || branch?.bR_COD || '016'; // Fallback to '016'
+    const branch = branches.find((b) => b.bR_NM === selectedBranch);
+    return branch?.bR_COD || '016';
   }, [selectedBranch, branches]);
 
-  // ✅ Fetch pharmacy item dashboard data from API with dynamic params
+  // ✅ Fetch pharmacy item dashboard data from API
   const { data: pharmacyData, isLoading, error } = usePharmacyItemDashboard({
     fromDt,
     toDt,
-    brCode: branchCode, // ✅ DYNAMIC: Now uses selected branch or first branch for "All Branches"
+    brCode: branchCode,
   });
 
   const pharmacyItems = pharmacyData?.items || [];
@@ -147,7 +173,7 @@ export function ModernItemDashboard({
     };
   }, [pharmacyItems, expiryItems]);
 
-  // ✅ KPI Cards Data - Using Real API Data
+  // ✅ KPI Cards Data
   const kpiCards = [
     {
       id: 'total-revenue',
@@ -200,7 +226,7 @@ export function ModernItemDashboard({
     ];
   }, [pharmacyItems]);
 
-  // ✅ Top Items by Revenue (Green bars)
+  // ✅ Top Items by Revenue
   const topItemsByRevenue = useMemo(() => {
     if (!pharmacyItems || pharmacyItems.length === 0) return [];
 
@@ -210,11 +236,10 @@ export function ModernItemDashboard({
       .map(item => ({
         name: item.itemName?.substring(0, 20) || 'N/A',
         value: item.totalRevenue ?? 0,
-        displayValue: (item.totalRevenue ?? 0).toFixed(1),
       }));
   }, [pharmacyItems, topItemsCount]);
 
-  // ✅ Top Items by Quantity (Blue bars)
+  // ✅ Top Items by Quantity
   const topItemsByQuantity = useMemo(() => {
     if (!pharmacyItems || pharmacyItems.length === 0) return [];
 
@@ -224,77 +249,10 @@ export function ModernItemDashboard({
       .map(item => ({
         name: item.itemName?.substring(0, 20) || 'N/A',
         value: item.totalSold ?? 0,
-        displayValue: (item.totalSold ?? 0).toFixed(1),
       }));
   }, [pharmacyItems, topItemsCount]);
 
-  const chartData = chartView === 'revenue' ? topItemsByRevenue : topItemsByQuantity;
-  const maxValue = Math.max(...chartData.map(d => d.value), 1);
-
-  // ✅ Pagination for Item Analysis Table
-  const paginatedItems = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return pharmacyItems.slice(startIndex, endIndex);
-  }, [pharmacyItems, currentPage, itemsPerPage]);
-
-  const totalItemPages = Math.ceil(pharmacyItems.length / itemsPerPage);
-
-  // ✅ Pagination for Short Expiry List Table
-  const paginatedExpiryItems = useMemo(() => {
-    const startIndex = (expiryCurrentPage - 1) * expiryPerPage;
-    const endIndex = startIndex + expiryPerPage;
-    return expiryItems.slice(startIndex, endIndex);
-  }, [expiryItems, expiryCurrentPage, expiryPerPage]);
-
-  const totalExpiryPages = Math.ceil(expiryItems.length / expiryPerPage);
-
-  // ✅ Export to CSV function
-  const handleExportToExcel = () => {
-    const isItemAnalysis = tableTab === 'item-analysis';
-    const dataToExport = isItemAnalysis ? pharmacyItems : expiryItems;
-    
-    if (!dataToExport || dataToExport.length === 0) {
-      alert('No data to export');
-      return;
-    }
-
-    // Create CSV content
-    let csvContent = '';
-    
-    if (isItemAnalysis) {
-      // Header row for item analysis
-      csvContent = 'Item Name,Category,Supplier,Brand,Current Stock,Days of Supply,Reorder Status,Nearest Expiry,Expiry Risk,Total Sold,Total Revenue,ABC Class\n';
-      
-      // Data rows
-      pharmacyItems.forEach(item => {
-        csvContent += `"${item.itemName}","${item.itemCategory || 'N/A'}","${item.supplier || 'N/A'}","${item.brand}",${item.currentStock},${item.daysOfSupply},"${item.reorderStatus}","${item.nearestExpiryDate || 'N/A'}","${item.expiryRisk}",${item.totalSold},${item.totalRevenue},"${item.aBCClass}"\n`;
-      });
-    } else {
-      // Header row for expiry items
-      csvContent = 'Item Name,Category,Company,Expiry,Status,Stock,Supplier\n';
-      
-      // Data rows
-      expiryItems.forEach(item => {
-        csvContent += `"${item.itemName || item.sT_COD}","${item.cT_NM || 'N/A'}","${item.company || 'N/A'}","${item.expiryMMYY}","${item.expiryStatus}",${item.stockInUnits || 0},"${item.supplier || 'N/A'}"\n`;
-      });
-    }
-    
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${tableTab}-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    console.log('✅ Exported to CSV successfully');
-  };
-
-  // ✅ Brand Wise Revenue Data from API
+  // ✅ Brand Wise Revenue Data
   const brandRevenueData = useMemo(() => {
     if (!pharmacyItems || pharmacyItems.length === 0) return [];
 
@@ -310,7 +268,7 @@ export function ModernItemDashboard({
       .sort((a, b) => b.value - a.value);
   }, [pharmacyItems]);
 
-  // ✅ Supplier Wise Revenue Data from API
+  // ✅ Supplier Wise Revenue Data
   const supplierRevenueData = useMemo(() => {
     if (!pharmacyItems || pharmacyItems.length === 0) return [];
 
@@ -326,8 +284,484 @@ export function ModernItemDashboard({
       .sort((a, b) => b.value - a.value);
   }, [pharmacyItems]);
 
+  // ✅ ECharts colors
+  const chartColors = {
+    textColor: isDark ? '#9ca3af' : '#6b7280',
+    gridColor: isDark ? '#374151' : '#e5e7eb',
+    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+  };
+
+  // ✅ Top Items Chart (ECharts Horizontal Bar)
+  const chartData = chartView === 'revenue' ? topItemsByRevenue : topItemsByQuantity;
+  const topItemsOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow',
+      },
+      backgroundColor: chartColors.backgroundColor,
+      borderColor: chartColors.gridColor,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+    },
+    grid: {
+      left: '25%',
+      right: '10%',
+      bottom: '6%',
+      top: '3%',
+      containLabel: false,
+    },
+    xAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+          type: 'dashed',
+        },
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: chartData.map(d => d.name),
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+    },
+    series: [{
+      type: 'bar',
+      data: chartData.map(d => d.value),
+      itemStyle: {
+        color: chartView === 'revenue' 
+          ? {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 1,
+              y2: 0,
+              colorStops: [
+                { offset: 0, color: '#10b981' },
+                { offset: 1, color: '#34d399' },
+              ],
+            }
+          : {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 1,
+              y2: 0,
+              colorStops: [
+                { offset: 0, color: '#3b82f6' },
+                { offset: 1, color: '#60a5fa' },
+              ],
+            },
+        borderRadius: [0, 4, 4, 0],
+      },
+      barWidth: '70%',
+    }],
+  };
+
+  // ✅ Brand/Supplier Chart (ECharts Vertical Bar)
   const brandSupplierData = brandSupplierTab === 'brand' ? brandRevenueData : supplierRevenueData;
-  const maxRevenueValue = Math.max(...brandSupplierData.map(d => d.value), 1);
+  const brandSupplierOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow',
+      },
+      backgroundColor: chartColors.backgroundColor,
+      borderColor: chartColors.gridColor,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+    },
+    grid: {
+      left: '50px',
+      right: '4%',
+      bottom: '25%',
+      top: '10%',
+      containLabel: false,
+    },
+    xAxis: {
+      type: 'category',
+      data: brandSupplierData.map(d => d.name.substring(0, 12)),
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 9,
+        rotate: 45,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+          type: 'dashed',
+        },
+      },
+    },
+    series: [{
+      type: brandChartType === 'bar' ? 'bar' : 'line',
+      data: brandSupplierData.map(d => d.value),
+      smooth: brandChartType === 'spline',
+      areaStyle: (brandChartType === 'area' || brandChartType === 'spline') ? {
+        color: brandSupplierTab === 'brand'
+          ? {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(236, 72, 153, 0.5)' },
+                { offset: 1, color: 'rgba(236, 72, 153, 0.1)' },
+              ],
+            }
+          : {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(59, 130, 246, 0.5)' },
+                { offset: 1, color: 'rgba(59, 130, 246, 0.1)' },
+              ],
+            },
+      } : undefined,
+      lineStyle: (brandChartType === 'line' || brandChartType === 'spline' || brandChartType === 'area') ? {
+        width: 2,
+        color: brandSupplierTab === 'brand' ? '#ec4899' : '#3b82f6',
+      } : undefined,
+      itemStyle: {
+        color: brandSupplierTab === 'brand'
+          ? (brandChartType === 'bar' ? {
+              type: 'linear',
+              x: 0,
+              y: 1,
+              x2: 0,
+              y2: 0,
+              colorStops: [
+                { offset: 0, color: '#ec4899' },
+                { offset: 1, color: '#f472b6' },
+              ],
+            } : '#ec4899')
+          : (brandChartType === 'bar' ? {
+              type: 'linear',
+              x: 0,
+              y: 1,
+              x2: 0,
+              y2: 0,
+              colorStops: [
+                { offset: 0, color: '#3b82f6' },
+                { offset: 1, color: '#60a5fa' },
+              ],
+            } : '#3b82f6'),
+        borderRadius: brandChartType === 'bar' ? [4, 4, 0, 0] : undefined,
+      },
+      barWidth: brandChartType === 'bar' ? 28 : undefined,
+      barMaxWidth: brandChartType === 'bar' ? 35 : undefined,
+    }],
+  };
+
+  // ��� TanStack Table Columns - Item Analysis
+  const itemAnalysisColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'itemName',
+      header: 'Item Name',
+      cell: ({ getValue }) => (
+        <div className="font-medium text-xs">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'itemCategory',
+      header: 'Category',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'supplier',
+      header: 'Supplier',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'brand',
+      header: 'Brand',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'currentStock',
+      header: 'Current Stock',
+      cell: ({ getValue }) => (
+        <div className="text-right text-xs">{(getValue() as number)?.toFixed(0) ?? '0'}</div>
+      ),
+    },
+    {
+      accessorKey: 'daysOfSupply',
+      header: 'Days of Supply',
+      cell: ({ getValue }) => (
+        <div className="text-right text-xs">{(getValue() as number)?.toFixed(0) ?? '0'}</div>
+      ),
+    },
+    {
+      accessorKey: 'reorderStatus',
+      header: 'Reorder Status',
+      cell: ({ getValue }) => {
+        const status = getValue() as string;
+        const colors = {
+          'Low Stock': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+          'Normal': 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+          'Overstock': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+        };
+        const color = colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+        return (
+          <div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${color}`}>
+              {status || 'N/A'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'nearestExpiryDate',
+      header: 'Expiry Date',
+      cell: ({ getValue }) => {
+        const date = getValue() as string;
+        if (!date || date === 'N/A') return <div className="text-xs">N/A</div>;
+        // Extract only the date part (YYYY-MM-DD)
+        try {
+          const datePart = date.split('T')[0];
+          return <div className="text-xs">{datePart}</div>;
+        } catch {
+          return <div className="text-xs">{date}</div>;
+        }
+      },
+    },
+    {
+      accessorKey: 'expiryRisk',
+      header: 'Expiry Risk',
+      cell: ({ getValue }) => {
+        const risk = getValue() as string;
+        const colors = {
+          'High': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+          'Medium': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+          'Low': 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+        };
+        const color = colors[risk as keyof typeof colors] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+        return (
+          <div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${color}`}>
+              {risk || 'N/A'}
+            </span>
+          </div>
+        );
+      },
+    },
+  ];
+
+  // ✅ TanStack Table Columns - Expiry Items
+  const expiryColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'itemName',
+      header: 'Item Name',
+      cell: ({ getValue }) => (
+        <div className="font-medium text-xs">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'itemCategory',
+      header: 'Category',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'brand',
+      header: 'Company',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'expiryDate',
+      header: 'Expiry MMYY',
+      cell: ({ getValue }) => {
+        const date = getValue() as string;
+        if (!date || date === 'N/A') return <div className="text-xs">N/A</div>;
+        // Convert to MMYY format
+        try {
+          const dateObj = new Date(date);
+          const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const yy = String(dateObj.getFullYear()).slice(-2);
+          return <div className="text-xs">{mm}{yy}</div>;
+        } catch {
+          return <div className="text-xs">{date}</div>;
+        }
+      },
+    },
+    {
+      accessorKey: 'expiryStatus',
+      header: 'Expiry Status',
+      cell: ({ getValue }) => {
+        const status = getValue() as string;
+        const colors = {
+          'Expired': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+          'Expiring Soon': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+          'Normal': 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+        };
+        const color = colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+        return (
+          <div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${color}`}>
+              {status || 'N/A'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'currentStock',
+      header: 'Stock',
+      cell: ({ getValue }) => (
+        <div className="text-right text-xs">{(getValue() as number)?.toFixed(0) ?? '0'}</div>
+      ),
+    },
+    {
+      accessorKey: 'supplier',
+      header: 'Supplier',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+  ];
+
+  // ✅ TanStack Table Columns - ABC Classification
+  const abcClassificationColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'itemName',
+      header: 'Item Name',
+      cell: ({ getValue }) => (
+        <div className="font-medium text-xs">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'itemCategory',
+      header: 'Category',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'totalSold',
+      header: 'Total Sold',
+      cell: ({ getValue }) => (
+        <div className="text-right text-xs font-medium">{(getValue() as number)?.toFixed(0) ?? '0'}</div>
+      ),
+    },
+    {
+      accessorKey: 'totalRevenue',
+      header: 'Total Revenue',
+      cell: ({ getValue }) => {
+        const value = getValue() as number;
+        return (
+          <div className="text-right text-xs font-medium">
+            {value?.toFixed(2) ?? '0.00'} <span className="text-[10px] text-gray-500">SAR</span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'aBCClass',
+      header: 'ABC Class',
+      cell: ({ getValue }) => {
+        const abcClass = getValue() as string;
+        const colors = {
+          'A': 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+          'B': 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
+          'C': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+        };
+        const color = colors[abcClass as keyof typeof colors] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+        return (
+          <div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${color}`}>
+              Class {abcClass || 'N/A'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'brand',
+      header: 'Brand',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+    {
+      accessorKey: 'supplier',
+      header: 'Supplier',
+      cell: ({ getValue }) => <div className="text-xs">{getValue() as string || 'N/A'}</div>,
+    },
+  ];
+
+  // ✅ Export to CSV function
+  const handleExportToExcel = () => {
+    if (tableTab === 'item-analysis' && pharmacyItems.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    if (tableTab === 'short-expiry' && expiryItems.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    let csvContent = '';
+
+    if (tableTab === 'item-analysis') {
+      csvContent = 'Item Name,Category,Supplier,Brand,Current Stock,Days of Supply,Reorder Status,Nearest Expiry,Expiry Risk,Total Sold,Total Revenue,ABC Class\n';
+      pharmacyItems.forEach((item) => {
+        csvContent += `"${item.itemName}","${item.itemCategory || 'N/A'}","${item.supplier || 'N/A'}","${item.brand}",${item.currentStock},${item.daysOfSupply},"${item.reorderStatus}","${item.nearestExpiryDate || 'N/A'}","${item.expiryRisk}",${item.totalSold},${item.totalRevenue},"${item.aBCClass}"\n`;
+      });
+    } else {
+      csvContent = 'Item Name,Brand,Batch No,Expiry Date,Days to Expiry,Quantity,Status\n';
+      expiryItems.forEach((item) => {
+        csvContent += `"${item.itemName || 'N/A'}","${item.company || 'N/A'}","${item.sT_COD || 'N/A'}","${item.expiryMMYY || 'N/A'}",,${item.stockInUnits ?? 0},"${item.expiryStatus || 'N/A'}"\n`;
+      });
+    }
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${tableTab}-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   // ✅ Filtered items by ABC classification
   const filteredABCItems = useMemo(() => {
@@ -356,15 +790,11 @@ export function ModernItemDashboard({
       return;
     }
 
-    // Create CSV content
     let csvContent = 'Item Name,Category,Total Sold,Total Revenue,ABC Class\n';
-    
-    // Data rows
     abcFilteredItems.forEach(item => {
       csvContent += `"${item.itemName}","${item.itemCategory || 'N/A'}",${item.totalSold},${item.totalRevenue},"${item.aBCClass}"\n`;
     });
     
-    // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -374,17 +804,6 @@ export function ModernItemDashboard({
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
-    console.log('✅ Exported ABC Class data to CSV successfully');
-  };
-
-  const getABCColor = (classification: string) => {
-    switch (classification) {
-      case 'A': return '#8b5cf6';
-      case 'B': return '#06b6d4';
-      case 'C': return '#10b981';
-      default: return '#6b7280';
-    }
   };
 
   // ✅ Loading State
@@ -449,10 +868,7 @@ export function ModernItemDashboard({
               className={`group relative overflow-hidden rounded-lg p-4 text-white ${kpi.bgColor} cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl`}
               style={{ animation: `slideInScale 0.5s ease-out ${index * 0.1}s both` }}
             >
-              {/* Animated Background Gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              {/* Decorative Circles with Animation */}
               <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
               <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
@@ -480,17 +896,30 @@ export function ModernItemDashboard({
               </div>
             </div>
           );
-        })}</div>
+        })}
+      </div>
 
-      {/* Main Content Grid - Compact */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ABC Classification - Compact */}
+        {/* ABC Classification (Custom SVG Donut - Keep as is) */}
         <div className={`rounded-lg border p-4 transition-all duration-300 hover:shadow-lg ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <h3 className={`font-semibold text-sm mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            ABC Classification
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              ABC Classification
+            </h3>
+            {onFullscreen && (
+              <button
+                onClick={() => onFullscreen('abc-classification', { abcData: abcClassificationData })}
+                className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${
+                  isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
+                }`}
+                title="Expand widget"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-          {/* Compact Donut Chart */}
           <div className="relative w-48 h-48 mx-auto mb-4">
             <svg viewBox="0 0 200 200" className="transform -rotate-90">
               <circle cx="100" cy="100" r="85" fill="none" stroke={isDark ? '#374151' : '#f3f4f6'} strokeWidth="18" opacity="0.2" />
@@ -534,14 +963,12 @@ export function ModernItemDashboard({
             </svg>
           </div>
 
-          {/* Compact Legend */}
           <div className="space-y-2">
             {abcClassificationData.map((item, index) => (
               <div 
                 key={index} 
                 className={`flex items-center justify-between cursor-pointer p-2 rounded transition-all duration-200 hover:scale-102 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
                 onClick={() => handleABCClassClick(item.name as 'A' | 'B' | 'C')}
-                style={{ animation: `slideInLeft 0.4s ease-out ${index * 0.1}s both` }}
               >
                 <div className="flex items-center gap-2">
                   <div 
@@ -560,9 +987,8 @@ export function ModernItemDashboard({
           </div>
         </div>
 
-        {/* Revenue/Quantity Chart - Compact */}
+        {/* Revenue/Quantity Chart (ECharts Horizontal Bar) */}
         <div className={`lg:col-span-2 rounded-lg border p-4 transition-all duration-300 hover:shadow-lg ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          {/* Compact Header with Tabs */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <button
@@ -592,7 +1018,7 @@ export function ModernItemDashboard({
               <select
                 value={topItemsCount}
                 onChange={(e) => setTopItemsCount(Number(e.target.value))}
-                className={`px-2 py-1 rounded border text-xs transition-all duration-200 hover:border-purple-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
+                className={`px-2 py-1 rounded border text-xs transition-all duration-200 ${
                   isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                 }`}
               >
@@ -601,48 +1027,18 @@ export function ModernItemDashboard({
                 <option value={15}>15</option>
                 <option value={20}>20</option>
               </select>
-              <button 
-                onClick={handleScrollToTable}
-                className="px-3 py-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded text-xs font-medium hover:from-purple-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                View
-              </button>
             </div>
           </div>
 
-          {/* Compact Horizontal Bar Chart */}
-          <div className="space-y-2">
-            {chartData.map((item, index) => (
-              <div key={index} className="group">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className={`text-[10px] truncate max-w-[150px] ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {item.name}
-                  </span>
-                  <span className={`text-[10px] font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {item.displayValue}
-                  </span>
-                </div>
-                <div className="relative">
-                  <div className={`h-4 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 group-hover:opacity-90 ${
-                        chartView === 'revenue' ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-blue-400 to-blue-500'
-                      }`}
-                      style={{ 
-                        width: `${(item.value / maxValue) * 100}%`,
-                        animation: `expandBar 0.8s ease-out ${index * 0.05}s both`,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ReactECharts
+            option={topItemsOption}
+            style={{ height: '300px' }}
+            theme={isDark ? 'dark' : undefined}
+          />
         </div>
       </div>
 
-      {/* Brand/Supplier Chart - Compact */}
+      {/* Brand/Supplier Chart (ECharts Vertical Bar) */}
       <div className={`rounded-lg border p-4 transition-all duration-300 hover:shadow-lg ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -668,20 +1064,79 @@ export function ModernItemDashboard({
             </button>
           </div>
 
-          <div className="relative">
-            <select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value as 'bar' | 'line' | 'area' | 'spline')}
-              className={`pl-3 pr-8 py-1 rounded border text-xs appearance-none transition-all duration-200 hover:border-purple-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
-                isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowChartTypeDropdown(!showChartTypeDropdown)}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border transition-all duration-200 ${
+                isDark ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <option value="bar">Bar</option>
-              <option value="line">Line</option>
-              <option value="area">Area</option>
-              <option value="spline">Spline</option>
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
+              {brandChartType === 'line' && 'Line Graph'}
+              {brandChartType === 'bar' && 'Bar Graph'}
+              {brandChartType === 'area' && 'Area Graph'}
+              {brandChartType === 'spline' && 'Spline Graph'}
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${
+                showChartTypeDropdown ? 'rotate-180' : ''
+              }`} />
+            </button>
+            {showChartTypeDropdown && (
+              <div className={`absolute right-0 mt-2 w-40 rounded-lg border shadow-lg z-50 py-1 ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <button
+                  onClick={() => {
+                    setBrandChartType('line');
+                    setShowChartTypeDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    brandChartType === 'line'
+                      ? isDark ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700'
+                      : isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Line Graph
+                </button>
+                <button
+                  onClick={() => {
+                    setBrandChartType('bar');
+                    setShowChartTypeDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    brandChartType === 'bar'
+                      ? isDark ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700'
+                      : isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Bar Graph
+                </button>
+                <button
+                  onClick={() => {
+                    setBrandChartType('area');
+                    setShowChartTypeDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    brandChartType === 'area'
+                      ? isDark ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700'
+                      : isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Area Graph
+                </button>
+                <button
+                  onClick={() => {
+                    setBrandChartType('spline');
+                    setShowChartTypeDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    brandChartType === 'spline'
+                      ? isDark ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700'
+                      : isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Spline Graph
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -689,57 +1144,27 @@ export function ModernItemDashboard({
           {brandSupplierTab === 'brand' ? 'Brand' : 'Supplier'} Revenue
         </h3>
 
-        <div className="relative pl-8">
-          <div className={`absolute left-0 top-0 h-[160px] flex flex-col justify-between text-[9px] ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            <span>{Math.round(maxRevenueValue)}</span>
-            <span>{Math.round(maxRevenueValue * 0.5)}</span>
-            <span>0</span>
+        {/* Scrollable Chart Container */}
+        <div 
+          className={`overflow-x-auto overflow-y-hidden ${isDark ? 'scrollbar-dark' : 'scrollbar-light'}`}
+          style={{ 
+            scrollbarWidth: 'thin',
+            scrollbarColor: isDark ? '#4b5563 transparent' : '#9ca3af transparent'
+          }}
+        >
+          <div style={{ minWidth: `${Math.max(800, brandSupplierData.length * 45)}px` }}>
+            <ReactECharts
+              option={brandSupplierOption}
+              style={{ height: '250px', width: '100%' }}
+              theme={isDark ? 'dark' : undefined}
+            />
           </div>
-
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-700">
-            <div className="flex items-end gap-1 h-40" style={{ minWidth: `${brandSupplierData.length * 35}px` }}>
-              {brandSupplierData.map((item, index) => {
-                const heightPercentage = (item.value / maxRevenueValue) * 100;
-                const barColor = brandSupplierTab === 'brand' ? '#ec4899' : '#3b82f6';
-                
-                return (
-                  <div key={index} className="group flex flex-col items-center" style={{ minWidth: '35px' }}>
-                    <div className="w-full flex items-end justify-center" style={{ height: '160px' }}>
-                      <div
-                        className="w-full rounded-t transition-all duration-500 hover:opacity-80 cursor-pointer relative"
-                        style={{
-                          height: `${heightPercentage}%`,
-                          background: `linear-gradient(to top, ${barColor}, ${barColor}dd)`,
-                          animation: `expandBarVertical 0.8s ease-out ${(index % 20) * 0.05}s both`,
-                          boxShadow: '0 -2px 8px rgba(0,0,0,0.1)'
-                        }}
-                        title={`${item.name}: ${item.value.toFixed(2)}`}
-                      >
-                        {/* Hover tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                          {item.value.toFixed(0)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`text-[8px] text-center mt-1 transform -rotate-45 origin-top-left whitespace-nowrap ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {item.name.substring(0, 12)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <div className={`w-2 h-2 rounded-full ${brandSupplierTab === 'brand' ? 'bg-pink-500' : 'bg-blue-500'}`} />
-          <span className={`text-[10px] ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Total Revenue</span>
         </div>
       </div>
 
-      {/* Data Tables - Compact */}
-      <div id="item-data-table" className={`rounded-lg border transition-all duration-300 hover:shadow-lg ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      {/* Data Tables (AG Grid) */}
+      <div id="item-data-table" className={`rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-lg ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'}`}>
           <div className="flex items-center gap-4">
             <button
               onClick={() => setTableTab('item-analysis')}
@@ -765,278 +1190,136 @@ export function ModernItemDashboard({
 
           <button
             onClick={handleExportToExcel}
-            className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-medium rounded hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium transition-all duration-200 active:scale-95 shadow-sm hover:shadow-md"
           >
             <Download className="w-3 h-3" />
             Export
           </button>
         </div>
 
-        {/* Item Analysis Table */}
-        {tableTab === 'item-analysis' && (
-          <div className="overflow-y-auto max-h-[500px] scrollbar-thin scrollbar-thumb-purple-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-700">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10" style={{ backgroundColor: isDark ? '#1f2937' : '#f9fafb' }}>
-                <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Item
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Category
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Supplier
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Brand
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Stock
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Days
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Status
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Expiry
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Risk
-                  </th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                {paginatedItems.map((item, index) => {
-                  let reorderBadgeClass = '';
-                  if (item.reorderStatus === 'Critical Reorder Now' || item.reorderStatus === 'Out of Stock') {
-                    reorderBadgeClass = 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
-                  } else if (item.reorderStatus === 'Low Consider Reorder') {
-                    reorderBadgeClass = 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800';
-                  } else {
-                    reorderBadgeClass = 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
-                  }
-
-                  return (
-                    <tr 
-                      key={index} 
-                      className={`transition-all duration-200 hover:scale-[1.01] ${isDark ? 'hover:bg-gray-750' : 'hover:bg-gray-50'}`}
-                      style={{ animation: `fadeIn 0.3s ease-out ${index * 0.05}s both` }}
-                    >
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                        {item.itemName.substring(0, 30)}
-                      </td>
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {item.itemCategory || 'N/A'}
-                      </td>
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {item.supplier || 'N/A'}
-                      </td>
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {item.brand}
-                      </td>
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {(item.currentStock ?? 0).toFixed(0)}
-                      </td>
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {(item.daysOfSupply ?? 0).toFixed(0)}
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${reorderBadgeClass} transition-all duration-200 hover:scale-105`}>
-                          {item.reorderStatus.substring(0, 15)}
-                        </span>
-                      </td>
-                      <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {item.nearestExpiryDate || 'N/A'}
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 transition-all duration-200 hover:scale-105">
-                          {item.expiryRisk}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Compact Pagination */}
-            <div className={`flex items-center justify-between px-3 py-2 border-t ${isDark ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Rows:</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className={`px-2 py-1 rounded border text-xs transition-all duration-200 hover:border-purple-500 ${
-                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={15}>15</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, pharmacyItems.length)} of {pharmacyItems.length}
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className={`p-1 rounded transition-all duration-200 hover:bg-purple-500 hover:text-white active:scale-95 ${
-                      currentPage === 1
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:scale-110'
-                    }`}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalItemPages, prev + 1))}
-                    disabled={currentPage === totalItemPages}
-                    className={`p-1 rounded transition-all duration-200 hover:bg-purple-500 hover:text-white active:scale-95 ${
-                      currentPage === totalItemPages
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:scale-110'
-                    }`}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Short Expiry List Table */}
-        {tableTab === 'short-expiry' && (
-          <div className="overflow-y-auto max-h-[500px] scrollbar-thin scrollbar-thumb-purple-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-700">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10" style={{ backgroundColor: isDark ? '#1f2937' : '#f9fafb' }}>
-                <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Item
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Category
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Company
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Expiry
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Status
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Stock
-                  </th>
-                  <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider`}>
-                    Supplier
-                  </th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                {paginatedExpiryItems.map((item, index) => (
-                  <tr 
-                    key={index} 
-                    className={`transition-all duration-200 hover:scale-[1.01] ${isDark ? 'hover:bg-gray-750' : 'hover:bg-gray-50'}`}
-                    style={{ animation: `fadeIn 0.3s ease-out ${index * 0.05}s both` }}
-                  >
-                    <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                      {(item.itemName || item.sT_COD).substring(0, 30)}
-                    </td>
-                    <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                      {item.cT_NM || 'N/A'}
-                    </td>
-                    <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                      {item.company || 'N/A'}
-                    </td>
-                    <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                      {item.expiryMMYY}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 transition-all duration-200 hover:scale-105">
-                        {item.expiryStatus}
-                      </span>
-                    </td>
-                    <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                      {item.stockInUnits || 0}
-                    </td>
-                    <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                      {item.supplier || 'N/A'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Compact Pagination */}
-            <div className={`flex items-center justify-between px-3 py-2 border-t ${isDark ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Rows:</span>
-                <select
-                  value={expiryPerPage}
-                  onChange={(e) => {
-                    setExpiryPerPage(Number(e.target.value));
-                    setExpiryCurrentPage(1);
-                  }}
-                  className={`px-2 py-1 rounded border text-xs transition-all duration-200 hover:border-purple-500 ${
-                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={15}>15</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {(expiryCurrentPage - 1) * expiryPerPage + 1}–{Math.min(expiryCurrentPage * expiryPerPage, expiryItems.length)} of {expiryItems.length}
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setExpiryCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={expiryCurrentPage === 1}
-                    className={`p-1 rounded transition-all duration-200 hover:bg-purple-500 hover:text-white active:scale-95 ${
-                      expiryCurrentPage === 1
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:scale-110'
-                    }`}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setExpiryCurrentPage(prev => Math.min(totalExpiryPages, prev + 1))}
-                    disabled={expiryCurrentPage === totalExpiryPages}
-                    className={`p-1 rounded transition-all duration-200 hover:bg-purple-500 hover:text-white active:scale-95 ${
-                      expiryCurrentPage === totalExpiryPages
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:scale-110'
-                    }`}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="p-4">
+          <DataTable
+            columns={tableTab === 'item-analysis' ? itemAnalysisColumns : expiryColumns}
+            data={tableTab === 'item-analysis' ? pharmacyItems : expiryItems}
+            isDark={isDark}
+            height="500px"
+            enablePagination={true}
+            enableSorting={true}
+            pageSize={10}
+          />
+        </div>
       </div>
 
-      {/* Enhanced Animations */}
+      {/* ABC Classification Modal */}
+      {showABCModal && selectedABCClass && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`max-w-7xl w-full rounded-xl shadow-2xl max-h-[95vh] overflow-hidden ${
+            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white'
+          }`}>
+            <div className={`flex items-center justify-between px-6 py-4 border-b ${
+              isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+            }`}>
+              <div>
+                <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  ABC Class {selectedABCClass} Items
+                </h3>
+                <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {filteredABCItems.length} items in this classification
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportABCClass}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
+                <button
+                  onClick={handleCloseABCModal}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <DataTable
+                columns={abcClassificationColumns}
+                data={filteredABCItems}
+                isDark={isDark}
+                height="calc(95vh - 180px)"
+                enablePagination={true}
+                enableSorting={true}
+                enableFiltering={true}
+                enableColumnPinning={true}
+                enableColumnReordering={true}
+                enableColumnResizing={true}
+                enableGlobalFilter={true}
+                pageSize={20}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top Items Modal */}
+      {showTopItemsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`max-w-7xl w-full rounded-xl shadow-2xl max-h-[95vh] overflow-hidden ${
+            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white'
+          }`}>
+            <div className={`flex items-center justify-between px-6 py-4 border-b ${
+              isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+            }`}>
+              <div>
+                <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Top {topItemsCount} {chartView === 'revenue' ? 'Revenue' : 'Quantity'} Items
+                </h3>
+                <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {chartData.length} items in this list
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCloseTopItemsModal}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <DataTable
+                columns={itemAnalysisColumns}
+                data={chartData.map(item => ({
+                  itemName: item.name,
+                  totalRevenue: chartView === 'revenue' ? item.value : 0,
+                  totalSold: chartView === 'quantity' ? item.value : 0,
+                }))}
+                isDark={isDark}
+                height="calc(95vh - 180px)"
+                enablePagination={true}
+                enableSorting={true}
+                enableFiltering={true}
+                enableColumnPinning={true}
+                enableColumnReordering={true}
+                enableColumnResizing={true}
+                enableGlobalFilter={true}
+                pageSize={20}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Animations */}
       <style jsx>{`
         @keyframes slideInScale {
           from {
@@ -1049,197 +1332,12 @@ export function ModernItemDashboard({
           }
         }
 
-        @keyframes slideInLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
         @keyframes drawCircle {
           from {
-            stroke-dasharray: 0 1000;
+            stroke-dasharray: 0 535;
           }
-        }
-
-        @keyframes expandBar {
-          from {
-            width: 0;
-          }
-        }
-
-        @keyframes expandBarVertical {
-          from {
-            height: 0;
-          }
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        .hover\:scale-102:hover {
-          transform: scale(1.02);
-        }
-
-        /* Custom scrollbar for webkit browsers */
-        .scrollbar-thin::-webkit-scrollbar {
-          height: 6px;
-          width: 6px;
-        }
-
-        .scrollbar-thumb-purple-500::-webkit-scrollbar-thumb {
-          background-color: #a855f7;
-          border-radius: 3px;
-        }
-
-        .scrollbar-thumb-purple-500::-webkit-scrollbar-thumb:hover {
-          background-color: #9333ea;
-        }
-
-        .scrollbar-track-gray-200::-webkit-scrollbar-track {
-          background-color: #e5e7eb;
-        }
-
-        .dark .scrollbar-track-gray-700::-webkit-scrollbar-track {
-          background-color: #374151;
         }
       `}</style>
-
-      {/* ABC Classification Modal - Enhanced */}
-      {showABCModal && selectedABCClass && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
-          onClick={handleCloseABCModal}
-        >
-          <div 
-            className={`rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden transform transition-all duration-300 animate-scaleIn ${isDark ? 'bg-gray-800' : 'bg-white'}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
-              <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                ABC Classification - Class {selectedABCClass}
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExportABCClass}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-xs font-medium rounded hover:from-teal-600 hover:to-teal-700 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  <Download className="w-3 h-3" />
-                  Export
-                </button>
-                <button
-                  onClick={handleCloseABCModal}
-                  className={`p-1.5 rounded transition-all duration-200 hover:bg-red-500 hover:text-white active:scale-95 ${isDark ? 'hover:bg-red-600' : ''}`}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="overflow-auto max-h-[calc(90vh-120px)]">
-              <table className="w-full">
-                <thead className="sticky top-0 z-10" style={{ backgroundColor: isDark ? '#1f2937' : '#f9fafb' }}>
-                  <tr>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Item
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Category
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Sold
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Revenue
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Avg Price
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Margin
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Stock
-                    </th>
-                    <th className={`px-3 py-2 text-left text-[10px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'} uppercase tracking-wider border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      Class
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredABCItems.map((item, index) => {
-                    const avgUnitPrice = item.totalSold > 0 ? item.totalRevenue / item.totalSold : 0;
-                    const isEvenRow = index % 2 === 0;
-                    
-                    return (
-                      <tr 
-                        key={index} 
-                        className={`transition-all duration-200 hover:scale-[1.005] ${isEvenRow ? (isDark ? 'bg-gray-800' : 'bg-white') : (isDark ? 'bg-gray-750' : 'bg-cyan-50')} ${isDark ? 'hover:bg-gray-700' : 'hover:bg-cyan-100'}`}
-                      >
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                          {item.itemName?.substring(0, 40) || 'N/A'}
-                        </td>
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {item.itemCategory || 'N/A'}
-                        </td>
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {(item.totalSold ?? 0).toFixed(0)}
-                        </td>
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {(item.totalRevenue ?? 0).toFixed(2)}
-                        </td>
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {avgUnitPrice.toFixed(2)}
-                        </td>
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {(item.grossMargin ?? 0).toFixed(2)}
-                        </td>
-                        <td className={`px-3 py-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {(item.currentStock ?? 0).toFixed(0)}
-                        </td>
-                        <td className="px-3 py-2 text-xs">
-                          <div 
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-white font-semibold text-[10px] transition-transform duration-200 hover:scale-110"
-                            style={{ backgroundColor: getABCColor(item.aBCClass) }}
-                          >
-                            {item.aBCClass}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {filteredABCItems.length === 0 && (
-                <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No items in class {selectedABCClass}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className={`flex items-center justify-between px-4 py-2 border-t ${isDark ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
-              <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Total: {filteredABCItems.length} items
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

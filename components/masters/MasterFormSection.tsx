@@ -4,7 +4,7 @@ interface MasterFormSectionProps {
   title?: string;
   subtitle?: string;
   children: ReactNode;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   columns?: 1 | 2 | 3 | 4;
   gap?: 2 | 3 | 4 | 5 | 6;
   className?: string;

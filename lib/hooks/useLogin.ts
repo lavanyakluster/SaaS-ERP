@@ -4,14 +4,9 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { login, type LoginResponse } from '@/lib/api';
+import { login, type LoginResponse, type LoginCredentials } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { setAuthStatusCookie } from '@/lib/utils/auth-helpers';
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
 
 interface UseLoginOptions {
   onSuccess?: (data: LoginResponse) => void;
@@ -34,8 +29,8 @@ interface UseLoginOptions {
  * });
  * 
  * loginUser({
- *   email: 'user@example.com',
- *   password: 'password123',
+ *   Email: 'user@example.com',
+ *   Password: 'password123',
  * });
  * ```
  */
@@ -45,12 +40,17 @@ export const useLogin = (options?: UseLoginOptions) => {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
       try {
-        console.log('🔐 Login attempt:', credentials.email);
-        const response = await login({
-          Email: credentials.email,
-          Password: credentials.password,
+        console.log('🔐 Login attempt:', credentials.Email);
+        const response = await login(credentials);
+        
+        console.log('✅ Login API response (RAW):', response);
+        console.log('📊 Raw expiresIn from API:', {
+          expiresIn: response.expiresIn,
+          type: typeof response.expiresIn,
+          asNumber: Number(response.expiresIn),
+          asNumberType: typeof Number(response.expiresIn),
         });
-        console.log('✅ Login API response:', response);
+        
         return response;
       } catch (error) {
         console.error('❌ Login API error:', error);
@@ -63,13 +63,16 @@ export const useLogin = (options?: UseLoginOptions) => {
         hasAccessToken: !!data.accessToken,
         hasRefreshToken: !!data.refreshToken,
         expiresIn: data.expiresIn,
+        expiresInType: typeof data.expiresIn,
         accessTokenLength: data.accessToken?.length,
         refreshTokenLength: data.refreshToken?.length,
       });
+      console.log('📊 Raw API response expiresIn:', data.expiresIn);
       
       // ✅ Store both access token AND refresh token
       setTokens(data.accessToken, data.refreshToken, data.expiresIn);
       console.log('✅ Tokens stored in auth store (access + refresh)');
+      console.log('🔍 Tokens stored with expiresIn:', data.expiresIn);
 
       // Store user information
       setUser({

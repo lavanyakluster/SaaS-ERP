@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider, AuthProvider, QueryProvider } from '@/components/providers';
-import { CorruptedTokenGuard } from '@/components/auth';
+import { CorruptedTokenGuard, TokenRefreshProvider } from '@/components/auth';
 import { Toaster } from '@/components/ui/sonner';
 
 // Optimize font loading with display swap
@@ -84,8 +84,10 @@ export default function RootLayout({
         <QueryProvider>
           <ThemeProvider>
             <AuthProvider>
-              <CorruptedTokenGuard />
-              {children}
+              <TokenRefreshProvider>
+                <CorruptedTokenGuard />
+                {children}
+              </TokenRefreshProvider>
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>

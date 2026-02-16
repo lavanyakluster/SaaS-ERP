@@ -2,7 +2,7 @@
 
 interface BenefitsSectionProps {
   benefits: readonly string[];
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 // Icon mapping for benefits

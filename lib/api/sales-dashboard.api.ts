@@ -45,6 +45,12 @@ export interface BranchSalesData {
 }
 
 /**
+ * Branch Profit Data (same structure as BranchSalesData)
+ * Used for profit analysis tab
+ */
+export type BranchProfitData = BranchSalesData;
+
+/**
  * Sales Dashboard API Response
  */
 export interface SalesDashboardResponse {

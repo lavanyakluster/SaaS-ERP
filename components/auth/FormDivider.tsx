@@ -5,7 +5,7 @@
 
 interface FormDividerProps {
   text?: string;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function FormDivider({ text = 'OR', theme = 'light' }: FormDividerProps) {

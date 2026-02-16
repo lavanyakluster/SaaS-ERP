@@ -17,7 +17,7 @@ interface MasterFormAutocompleteProps {
   placeholder?: string;
   label?: string;
   required?: boolean;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   isLoading?: boolean;
   error?: string;
   disabled?: boolean;

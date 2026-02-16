@@ -11,7 +11,7 @@ interface Feature {
 
 interface FeaturesSectionProps {
   features: Feature[];
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 // Icon mapping with emojis

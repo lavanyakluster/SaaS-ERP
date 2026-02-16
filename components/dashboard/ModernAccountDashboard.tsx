@@ -3,34 +3,26 @@
  * 
  * ✅ Enterprise Features:
  * - Real API integration with dynamic parameters
- * - Financial ratios with circular gauges and charts
- * - Balance sheet table
+ * - Financial ratios with circular gauges and ECharts
+ * - Balance sheet table with custom HTML table (not TanStack)
  * - Cumulative checkbox only
  * - Uses date and branch from dashboard nav
  * - Organization context from auth store
  * - Multi-tenant architecture
+ * - Apache ECharts for all visualizations
+ * - Simple, clean custom table matching screenshot design
  */
 
 'use client';
 
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
+import { BalanceSheetTable } from './BalanceSheetTable';
 import { useParsedAccounts } from '@/lib/hooks/useAccounts';
 import { useAuthStore } from '@/lib/store/auth-store';
 import type { Branch } from '@/lib/api/branch.api';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-} from 'recharts';
 
 // ============================================================================
 // TYPES
@@ -48,7 +40,7 @@ interface ModernAccountDashboardProps {
 }
 
 // ============================================================================
-// CIRCULAR GAUGE COMPONENT
+// CIRCULAR GAUGE COMPONENT (Custom SVG - Keep as is)
 // ============================================================================
 
 interface CircularGaugeProps {
@@ -256,6 +248,290 @@ export function ModernAccountDashboard({
   const roeValue = ratios ? parseRatio(ratios.ROE) : 0;
   const derValue = ratios ? parseRatio(ratios.DER) : 0;
 
+  // ECharts colors based on theme
+  const chartColors = {
+    textColor: isDark ? '#9ca3af' : '#6b7280',
+    gridColor: isDark ? '#374151' : '#e5e7eb',
+    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+  };
+
+  // ROA Bar Chart (ECharts)
+  const roaChartOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: chartColors.backgroundColor,
+      borderColor: chartColors.gridColor,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+      formatter: (params: any) => {
+        return `${params[0].axisValue}<br/>ROA: ${formatCurrency(params[0].value)}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: roaChartData.map(d => d.name),
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+          type: 'dashed',
+        },
+      },
+    },
+    series: [{
+      type: 'bar',
+      data: roaChartData.map(d => d.value),
+      itemStyle: {
+        color: '#14B8A6',
+        borderRadius: [4, 4, 0, 0],
+      },
+      barWidth: '60%',
+    }],
+  };
+
+  // WCR Line Chart (ECharts)
+  const wcrChartOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: chartColors.backgroundColor,
+      borderColor: chartColors.gridColor,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+      formatter: (params: any) => {
+        return `${params[0].axisValue}<br/>WCR: ${formatCurrency(params[0].value)}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: wcrChartData.map(d => d.name),
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+          type: 'dashed',
+        },
+      },
+    },
+    series: [{
+      type: 'line',
+      data: wcrChartData.map(d => d.value),
+      smooth: true,
+      lineStyle: {
+        color: '#06B6D4',
+        width: 2,
+      },
+      itemStyle: {
+        color: '#06B6D4',
+      },
+      symbol: 'none',
+    }],
+  };
+
+  // ROE Bar Chart (ECharts)
+  const roeChartOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: chartColors.backgroundColor,
+      borderColor: chartColors.gridColor,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+      formatter: (params: any) => {
+        return `${params[0].axisValue}<br/>ROE: ${formatCurrency(params[0].value)}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: roeChartData.map(d => d.name),
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+          type: 'dashed',
+        },
+      },
+    },
+    series: [{
+      type: 'bar',
+      data: roeChartData.map(d => d.value),
+      itemStyle: {
+        color: '#EC4899',
+        borderRadius: [4, 4, 0, 0],
+      },
+      barWidth: '60%',
+    }],
+  };
+
+  // DER Line Chart with Fill (ECharts)
+  const derChartOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: chartColors.backgroundColor,
+      borderColor: chartColors.gridColor,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+      formatter: (params: any) => {
+        return `${params[0].axisValue}<br/>DER: ${formatCurrency(params[0].value)}`;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: derChartData.map(d => d.name),
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+          type: 'dashed',
+        },
+      },
+    },
+    series: [{
+      type: 'line',
+      data: derChartData.map(d => d.value),
+      smooth: true,
+      lineStyle: {
+        color: '#A855F7',
+        width: 2,
+      },
+      itemStyle: {
+        color: '#A855F7',
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: '#A855F740' },
+            { offset: 1, color: '#A855F710' },
+          ],
+        },
+      },
+      symbol: 'none',
+    }],
+  };
+
   return (
     <div className="space-y-4">
       {/* Main Grid */}
@@ -279,14 +555,11 @@ export function ModernAccountDashboard({
                 color="#14B8A6"
               />
               <div className="mt-6">
-                <ResponsiveContainer width="100%" height={150}>
-                  <BarChart data={roaChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#14B8A6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ReactECharts
+                  option={roaChartOption}
+                  style={{ height: '120px' }}
+                  theme={isDark ? 'dark' : undefined}
+                />
               </div>
             </motion.div>
 
@@ -306,14 +579,11 @@ export function ModernAccountDashboard({
                 color="#06B6D4"
               />
               <div className="mt-6">
-                <ResponsiveContainer width="100%" height={150}>
-                  <LineChart data={wcrChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Line type="monotone" dataKey="value" stroke="#06B6D4" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <ReactECharts
+                  option={wcrChartOption}
+                  style={{ height: '120px' }}
+                  theme={isDark ? 'dark' : undefined}
+                />
               </div>
             </motion.div>
 
@@ -333,14 +603,11 @@ export function ModernAccountDashboard({
                 color="#EC4899"
               />
               <div className="mt-6">
-                <ResponsiveContainer width="100%" height={150}>
-                  <BarChart data={roeChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#EC4899" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ReactECharts
+                  option={roeChartOption}
+                  style={{ height: '120px' }}
+                  theme={isDark ? 'dark' : undefined}
+                />
               </div>
             </motion.div>
 
@@ -360,124 +627,32 @@ export function ModernAccountDashboard({
                 color="#A855F7"
               />
               <div className="mt-6">
-                <ResponsiveContainer width="100%" height={150}>
-                  <AreaChart data={derChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Area type="monotone" dataKey="value" stroke="#A855F7" fill="#A855F7" fillOpacity={0.3} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ReactECharts
+                  option={derChartOption}
+                  style={{ height: '120px' }}
+                  theme={isDark ? 'dark' : undefined}
+                />
               </div>
             </motion.div>
           </div>
         </div>
 
-        {/* Right Section: Balance Sheet */}
+        {/* Right Section: Balance Sheet Table (Custom Table) */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
         >
-          {/* Header */}
-          <div className="bg-cyan-500 text-white p-4 text-center">
-            <h3 className="text-lg font-semibold">Balance Sheet</h3>
-          </div>
-
-          {/* Content with scrollbar */}
-          <div className="max-h-[800px] overflow-y-auto custom-scrollbar">
-            {/* Assets Section */}
-            <div className="p-4">
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 uppercase">
-                ASSET
-              </h4>
-              <div className="space-y-2">
-                {assets.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between text-sm py-1.5"
-                  >
-                    <span className="text-gray-700 dark:text-gray-300 uppercase text-xs">
-                      {item.Particulars}
-                    </span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(item.Amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Total Assets */}
-              <div className="flex items-center justify-between text-sm py-2 mt-3 border-t border-gray-200 dark:border-gray-700">
-                <span className="font-bold text-gray-900 dark:text-white">Total</span>
-                <span className="font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(totalAssets)}
-                </span>
-              </div>
-            </div>
-
-            {/* Liabilities Section */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 uppercase">
-                LIABILITIES
-              </h4>
-              <div className="space-y-2">
-                {liabilities.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between text-sm py-1.5"
-                  >
-                    <span className="text-gray-700 dark:text-gray-300 uppercase text-xs">
-                      {item.Particulars}
-                    </span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(item.Amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Net Profit */}
-              <div className="flex items-center justify-between text-sm py-2 mt-2">
-                <span className="text-gray-700 dark:text-gray-300 uppercase text-xs">
-                  Net Profit
-                </span>
-                <span className={`font-medium ${
-                  netProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {formatCurrency(netProfit)}
-                </span>
-              </div>
-
-              {/* Total Liabilities */}
-              <div className="flex items-center justify-between text-sm py-2 mt-3 border-t border-gray-200 dark:border-gray-700">
-                <span className="font-bold text-gray-900 dark:text-white">Total</span>
-                <span className="font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(totalLiabilities)}
-                </span>
-              </div>
-            </div>
-          </div>
+          <BalanceSheetTable
+            assets={assets}
+            liabilities={liabilities}
+            totalAssets={totalAssets}
+            totalLiabilities={totalLiabilities}
+            netProfit={netProfit}
+            isDark={isDark}
+          />
         </motion.div>
       </div>
-
-      {/* Custom scrollbar styles */}
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #A855F7;
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #9333EA;
-        }
-      `}</style>
     </div>
   );
 }

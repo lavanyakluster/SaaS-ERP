@@ -7,7 +7,7 @@ interface LogoProps {
   showText?: boolean;
   title?: string;
   subtitle?: string;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   className?: string;
 }
 

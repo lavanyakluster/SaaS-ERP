@@ -51,6 +51,7 @@ export const useBranches = () => {
     enabled: isAuthenticated && !!selectedYear, // ✅ Only fetch if authenticated AND year is selected
     refetchOnMount: false, // ⚡ Don't refetch on mount if cached
     refetchOnWindowFocus: false, // ⚡ Don't refetch on window focus
+    refetchOnReconnect: false, // ⚡ Don't refetch on reconnect
   });
 };
 

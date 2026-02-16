@@ -1,9 +1,13 @@
+/**
+ * Microsoft Authentication Hook
+ * Handles Microsoft OAuth login flow
+ */
+
 import { useState } from 'react';
 import { useSocialLogin } from './useSocialLogin';
-import { signInWithMicrosoftPopup } from '@/lib/auth/microsoft-auth.service';
-import { isMicrosoftAuthConfigured } from '@/lib/auth/microsoft-auth.config';
+import { signInWithMicrosoftPopup } from '@/lib/auth/microsoft-oauth.service';
 import { toast } from 'sonner';
-import type { LoginResponse } from '@/lib/api';
+import { LoginResponse } from '@/lib/api';
 
 interface UseMicrosoftAuthOptions {
   onSuccess?: (data: LoginResponse) => void;
@@ -14,7 +18,6 @@ export const useMicrosoftAuth = (options?: UseMicrosoftAuthOptions) => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { mutateAsync: socialLogin } = useSocialLogin({
-    provider: 'microsoft',
     onSuccess: (data) => {
       setIsLoading(false);
       options?.onSuccess?.(data);
@@ -27,19 +30,20 @@ export const useMicrosoftAuth = (options?: UseMicrosoftAuthOptions) => {
 
   const loginWithMicrosoft = async () => {
     try {
-      if (!isMicrosoftAuthConfigured()) {
-        throw new Error('Microsoft authentication is not configured. Set NEXT_PUBLIC_MICROSOFT_CLIENT_ID and NEXT_PUBLIC_MICROSOFT_REDIRECT_URI.');
-      }
       setIsLoading(true);
+      
+      console.log('🔵 Starting Microsoft OAuth flow...');
       const result = await signInWithMicrosoftPopup();
       
       if (!result.success || !result.idToken) {
         throw new Error(result.error || 'Microsoft login failed');
       }
 
+      console.log('✅ Microsoft OAuth successful, sending to backend...');
+      
       await socialLogin({
         Provider: 'Microsoft',
-        IdToken: result.idToken,
+        IdToken: result.idToken
       });
       
     } catch (error: any) {
@@ -47,10 +51,12 @@ export const useMicrosoftAuth = (options?: UseMicrosoftAuthOptions) => {
       
       // Don't show toast for user cancellation
       if (error.message !== 'Login cancelled by user') {
-        console.error('Microsoft login flow error:', error);
+        console.error('❌ Microsoft login flow error:', error);
         toast.error('Microsoft Login Failed', {
           description: error.message || 'An unexpected error occurred'
         });
+      } else {
+        console.log('ℹ️ Microsoft login cancelled by user');
       }
       
       options?.onError?.(error);

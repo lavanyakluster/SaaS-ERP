@@ -16,8 +16,7 @@ import {
 import { DollarSign } from 'lucide-react';
 
 export default function CurrencyMasterPage() {
-  const { theme, isDark } = useTheme();
-  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
+  const { theme } = useTheme();
   const { activeGradient } = useGradientStore();
 
   const [formData, setFormData] = useState({
@@ -85,7 +84,7 @@ export default function CurrencyMasterPage() {
         subtitle="Manage multiple currency support"
         icon={DollarSign}
         gradient={activeGradient}
-        theme={themeMode}
+        theme={theme}
         onSave={handleSave}
         onDelete={handleDelete}
         onClear={handleClear}
@@ -97,7 +96,7 @@ export default function CurrencyMasterPage() {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <MasterFormCard theme={themeMode} maxWidth="5xl">
+          <MasterFormCard theme={theme} maxWidth="5xl">
             <div className="p-8">
               {/* Currency Information */}
               <MasterFormSection
@@ -105,7 +104,7 @@ export default function CurrencyMasterPage() {
                 subtitle="Select currency and define exchange rate"
                 columns={1}
                 gap={4}
-                theme={themeMode}
+                theme={theme}
               >
                 <MasterFormSelect
                   value={formData.currency}
@@ -114,7 +113,7 @@ export default function CurrencyMasterPage() {
                   placeholder="Select Currency"
                   label="Currency"
                   required
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormInput
@@ -123,7 +122,7 @@ export default function CurrencyMasterPage() {
                   placeholder="e.g., $, €, £, د.إ"
                   label="Currency Symbol"
                   required
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormInput
@@ -133,14 +132,14 @@ export default function CurrencyMasterPage() {
                   label="Rate"
                   type="number"
                   required
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormCheckbox
                   checked={formData.baseCurrency}
                   onChange={(checked) => handleInputChange('baseCurrency', checked)}
                   label="Set as Base Currency"
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormInput
@@ -149,7 +148,7 @@ export default function CurrencyMasterPage() {
                   placeholder="Number of decimal places (e.g., 2)"
                   label="Decimal Places"
                   type="number"
-                  theme={themeMode}
+                  theme={theme}
                 />
               </MasterFormSection>
 
@@ -162,7 +161,7 @@ export default function CurrencyMasterPage() {
                   'Decimal places typically range from 0 to 4',
                   'Rate updates do not affect historical transactions'
                 ]}
-                theme={themeMode}
+                theme={theme}
                 variant="info"
                 className="mt-6"
               />

@@ -14,7 +14,7 @@ interface PaymentMethodsSectionProps {
   paymentMethods: PaymentMethod[];
   onAddMethod: () => void;
   onEditMethod: (methodId: string) => void;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function PaymentMethodsSection({ 

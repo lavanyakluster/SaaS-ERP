@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { X, Shield, Clock, Loader2 } from 'lucide-react';
-import { ADDITIONAL_PERMISSIONS, OFF_DAY_OPTIONS } from '@/config/permissions';
+import { ADDITIONAL_PERMISSIONS, OFF_DAY_OPTIONS } from '@/lib/constants/permissions';
 import { PermissionsPanel } from './PermissionsPanel';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useCreateRole, useUpdateRole, useRoleById } from '@/lib/hooks/useRoles';
 import { useBranches } from '@/lib/hooks';
 import { combineAllPermissions, parseModulePermissionsFromApi, parseAdditionalPermissionsFromApi } from '@/lib/utils/permissions';
@@ -379,7 +379,7 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
               </div>
             </div>
 
-            {/* Permissions Panel - Shared Component */}
+            {/* Permissions Panel */}
             <PermissionsPanel
               modulePermissions={permissions.modulePermissions}
               selectedBranches={permissions.selectedBranches}
@@ -400,10 +400,6 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm">
             <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               <span className="font-semibold text-blue-500">{permissions.selectedBranches.length}</span> branches
-            </div>
-            <div className={`w-1 h-1 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
-            <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <span className="font-semibold text-purple-500">{permissions.selectedLedgers.length}</span> ledgers
             </div>
             <div className={`w-1 h-1 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
             <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>

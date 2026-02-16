@@ -14,7 +14,8 @@ export function useRoles() {
   return useQuery({
     queryKey: ['roles'],
     queryFn: getRoles,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // ⚡ 5 minutes cache
+    gcTime: 10 * 60 * 1000, // 🗑️ 10 minutes garbage collection
     refetchOnWindowFocus: true,
   });
 }
@@ -30,7 +31,8 @@ export function useRoleById(roleId: string | null) {
       return getRoleById(roleId!);
     },
     enabled: !!roleId, // Only fetch if roleId is provided
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // ⚡ 5 minutes cache
+    gcTime: 10 * 60 * 1000, // 🗑️ 10 minutes garbage collection
   });
 }
 

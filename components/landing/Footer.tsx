@@ -1,7 +1,7 @@
 'use client';
 
 interface FooterProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 const footerLinks = {

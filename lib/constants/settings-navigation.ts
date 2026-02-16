@@ -21,7 +21,20 @@ import {
   Lock,
   CreditCard,
 } from 'lucide-react';
-import { SettingsNavItem } from '@/components/settings/SettingsSidebar';
+
+interface SettingsSectionItem {
+  id: string;
+  label: string;
+  icon: any;
+  description: string;
+}
+
+export interface SettingsNavItem {
+  id: string;
+  label: string;
+  icon: any;
+  sections: SettingsSectionItem[];
+}
 
 export const SETTINGS_NAVIGATION: SettingsNavItem[] = [
   {

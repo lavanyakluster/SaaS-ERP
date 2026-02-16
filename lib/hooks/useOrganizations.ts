@@ -84,10 +84,12 @@ export const useOrganizations = () => {
       console.log('✅ Organizations fetched successfully:', response.data.length);
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - organizations don't change frequently
-    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    staleTime: 30 * 60 * 1000, // ⚡ 30 minutes - organizations rarely change
+    gcTime: 60 * 60 * 1000, // ⚡ 60 minutes cache time
     retry: false, // ❌ DISABLED: No automatic retries on failure
-    refetchOnWindowFocus: false, // Don't refetch on every focus
+    refetchOnWindowFocus: false, // ⚡ Don't refetch on window focus
+    refetchOnMount: false, // ⚡ Don't refetch on mount if cached
+    refetchOnReconnect: false, // ⚡ Don't refetch on reconnect
     enabled: isAuthenticated && hasToken, // Only run query if authenticated and has token
   });
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Eye, Edit, Trash2, Plus, Building2, FileText, ChevronDown, Loader2 } from 'lucide-react';
-import { MODULE_PERMISSIONS } from '@/config/permissions';
+import { MODULE_PERMISSIONS } from '@/lib/constants/permissions';
 import { useBranches } from '@/lib/hooks';
 import { VirtualBranchList } from './VirtualBranchList';
 
@@ -132,7 +132,7 @@ export function PermissionsPanel({
           <div className="flex-1 overflow-y-auto">
             {mainMenus.map((mainMenu) => {
               const mainPerms = modulePermissions[mainMenu.id];
-              const mainAllChecked = mainPerms?.add && mainPerms?.view && mainPerms?.edit && mainPerms?.delete;
+              const mainAllChecked = !!(mainPerms?.add && mainPerms?.view && mainPerms?.edit && mainPerms?.delete);
               const isExpanded = expandedMenus.includes(mainMenu.id);
               const hasSubmenus = mainMenu.submenus && mainMenu.submenus.length > 0;
 
@@ -235,7 +235,7 @@ export function PermissionsPanel({
                   {/* Submenus (Collapsible) */}
                   {hasSubmenus && isExpanded && mainMenu.submenus?.map((submenu) => {
                     const subPerms = modulePermissions[submenu.id];
-                    const subAllChecked = subPerms?.add && subPerms?.view && subPerms?.edit && subPerms?.delete;
+                    const subAllChecked = !!(subPerms?.add && subPerms?.view && subPerms?.edit && subPerms?.delete);
 
                     return (
                       <div
@@ -319,9 +319,8 @@ export function PermissionsPanel({
         </div>
       </div>
 
-      {/* Right Columns - Branch & Ledger Access (4 columns total on desktop, full width on mobile) */}
-      <div className="lg:col-span-4 grid grid-cols-1 gap-4 sm:gap-5 lg:gap-6 h-[600px] sm:h-[650px]">
-        {/* Branch Access */}
+      {/* Right Column - Branch Access (4 columns on desktop, full width on mobile) */}
+      <div className="lg:col-span-4 h-[600px] sm:h-[650px]">
         <div className={`rounded-lg sm:rounded-xl border overflow-hidden flex flex-col h-full ${
           isDark ? 'border-gray-700' : 'border-gray-200'
         }`}>
@@ -379,8 +378,6 @@ export function PermissionsPanel({
             )}
           </div>
         </div>
-
-        {/* Ledger Access removed */}
       </div>
     </>
   );

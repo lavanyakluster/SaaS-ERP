@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   DollarSign, CreditCard, ShoppingCart, TrendingUp, Receipt, Target, 
@@ -15,37 +15,24 @@ import {
   useBranchCode,
   useAutoOrganizationSwitch
 } from '@/lib/hooks';
+import { useManualCumulation } from '@/lib/hooks/useCumulation'; // ✅ NEW: Cumulation hook
 
 // ⚡ PERFORMANCE: Import lightweight components synchronously
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { OverviewWidgets } from '@/components/dashboard/OverviewWidgets';
+import { GradientMetricsGrid } from '@/components/dashboard/GradientMetricCard';
 
 // Types
 import type { DashboardType, Widget } from '@/components/dashboard/types';
 
 // Hooks
-import { useMetrics } from './hooks/useMetrics';
 import { useWidgets } from './hooks/useWidgets';
 import { useWidgetActions } from './hooks/useWidgetActions';
 
 // ⚡ PERFORMANCE: Lazy load heavy components with SSR disabled
 const DashboardCustomizer = dynamic(
   () => import('@/components/dashboard/DashboardCustomizer'),
-  { ssr: false }
-);
-
-const MetricsGrid = dynamic(
-  () => import('@/components/dashboard/MetricsGrid').then(mod => ({ default: mod.MetricsGrid })),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" /> }
-);
-
-const WidgetsGrid = dynamic(
-  () => import('@/components/dashboard/WidgetsGrid').then(mod => ({ default: mod.WidgetsGrid })),
-  { ssr: false, loading: () => <div className="h-96 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" /> }
-);
-
-const WidgetFullscreenModal = dynamic(
-  () => import('@/components/dashboard/WidgetFullscreenModal'),
   { ssr: false }
 );
 
@@ -74,14 +61,6 @@ const ModernSalesDashboard = dynamic(
   }
 );
 
-const EnhancedSalesDashboard = dynamic(
-  () => import('@/components/dashboard/EnhancedSalesDashboard').then(mod => ({ default: mod.EnhancedSalesDashboard })),
-  { 
-    ssr: false,
-    loading: () => <div className="h-96 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
-  }
-);
-
 const ModernAccountDashboard = dynamic(
   () => import('@/components/dashboard/ModernAccountDashboard').then(mod => ({ default: mod.ModernAccountDashboard })),
   { 
@@ -90,8 +69,27 @@ const ModernAccountDashboard = dynamic(
   }
 );
 
+// Loyalty Dashboard
+const LoyaltyDashboard = dynamic(
+  () => import('@/components/dashboard/LoyaltyDashboard').then(mod => ({ default: mod.LoyaltyDashboard })),
+  { 
+    ssr: false,
+    loading: () => <div className="h-96 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
+  }
+);
+
+// Sales Target Analysis Dashboard
+const SalesTargetDashboard = dynamic(
+  () => import('@/components/dashboard/SalesTargetDashboard').then(mod => ({ default: mod.SalesTargetDashboard })),
+  { 
+    ssr: false,
+    loading: () => <div className="h-96 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
+  }
+);
+
 export default function DashboardPage() {
-  const { isDark } = useTheme();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { selectedOrganization } = useAuthStore();
   
   // ✅ CRITICAL: Auto-switch organization after login and fetch years
@@ -174,9 +172,6 @@ export default function DashboardPage() {
     brCode: branchCode,
   }, activeDashboard === 'overview' && !branchesLoading);
 
-  // Get metrics for current dashboard
-  const metrics = useMetrics(activeDashboard, totals, isProfitLossLoading, profitLossError);
-
   // Get widgets for current dashboard
   const {
     activeWidgets,
@@ -205,6 +200,19 @@ export default function DashboardPage() {
     setFullscreenWidget,
   });
 
+  // ✅ CRITICAL: Manual cumulation hook - MUST be called at top level
+  const { mutate: performCumulation, isPending: isCumulating } = useManualCumulation();
+
+  // ✅ NEW: Handle cumulation button click - MUST be at top level
+  const handleCumulate = useCallback(() => {
+    performCumulation({
+      fromDt,
+      toDt,
+      brCode: branchCode,
+      year,
+    });
+  }, [performCumulation, fromDt, toDt, branchCode, year]);
+
   // Action handlers
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -215,51 +223,8 @@ export default function DashboardPage() {
     setTimeout(() => setIsRefreshing(false), 1500);
   }, []);
 
-  const handleExport = useCallback(() => {
-    console.log('📥 Exporting dashboard data...');
-    
-    // Create CSV content
-    const csvRows = [];
-    
-    // Add header
-    csvRows.push(['Dashboard Export', `Generated: ${new Date().toLocaleString()}`]);
-    csvRows.push([]); // Empty row
-    csvRows.push(['Organization', firm]);
-    csvRows.push(['Year', year]);
-    csvRows.push(['Branch', selectedBranch]);
-    csvRows.push(['Date Range', dateRange]);
-    csvRows.push([]); // Empty row
-    
-    // Add metrics data
-    if (metrics && metrics.length > 0) {
-      csvRows.push(['Metrics']);
-      csvRows.push(['Label', 'Value', 'Change']);
-      metrics.forEach(metric => {
-        csvRows.push([
-          metric.title,
-          metric.value,
-          metric.change
-        ]);
-      });
-    }
-    
-    // Convert to CSV string
-    const csvContent = csvRows.map(row => row.join(',')).join('\n');
-    
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dashboard-export-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    console.log('✅ Dashboard data exported successfully');
-  }, [metrics, firm, year, selectedBranch, dateRange]);
-
+  const handleExport = useCallback(() => {}, []);
+  
   const handleSaveCustomization = useCallback((widgetIds: string[]) => {
     setDashboardWidgets(prev => ({
       ...prev,
@@ -291,16 +256,6 @@ export default function DashboardPage() {
           isRefreshing={isRefreshing}
         />
         <div className="px-6 py-6 space-y-6">
-          {/* Enhanced Sales Dashboard with Tabs */}
-          <EnhancedSalesDashboard 
-            isDark={isDark}
-            dateRange={dateRange}
-            selectedBranch={selectedBranch}
-            branches={branches}
-            fromDt={fromDt}
-            toDt={toDt}
-          />
-
           {/* Sales Growth & Rep Sales Widgets */}
           <ModernSalesDashboard 
             isDark={isDark}
@@ -350,7 +305,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (activeDashboard === 'salekpi') {
+  if (activeDashboard === 'sales-kpi') {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <DashboardHeader
@@ -402,6 +357,8 @@ export default function DashboardPage() {
           isRefreshing={isRefreshing}
           isCumulative={isCumulative}
           onCumulativeChange={setIsCumulative}
+          onCumulate={handleCumulate} // ✅ NEW: Cumulation handler
+          isCumulating={isCumulating} // ✅ NEW: Cumulation loading state
         />
         <div className="px-6 py-4">
           <ModernAccountDashboard 
@@ -415,6 +372,67 @@ export default function DashboardPage() {
             toDt={toDt}
           />
         </div>
+      </div>
+    );
+  }
+
+  // Loyalty Dashboard
+  if (activeDashboard === 'loyalty') {
+    return (
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <DashboardHeader
+          firm={firm}
+          year={year}
+          selectedBranch={selectedBranch}
+          onBranchChange={setSelectedBranch}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          branches={branches}
+          branchesLoading={branchesLoading}
+          isDark={isDark}
+          customFromDate={customFromDate}
+          customToDate={customToDate}
+          onCustomDateChange={handleCustomDateChange}
+          activeDashboard={activeDashboard}
+          onDashboardChange={setActiveDashboard}
+          onExport={handleExport}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
+        <div className="px-6 py-6">
+          <LoyaltyDashboard 
+            dateFrom={fromDt}
+            dateTo={toDt}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Sales Target Analysis Dashboard
+  if (activeDashboard === 'sales-target') {
+    return (
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <DashboardHeader
+          firm={firm}
+          year={year}
+          selectedBranch={selectedBranch}
+          onBranchChange={setSelectedBranch}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          branches={branches}
+          branchesLoading={branchesLoading}
+          isDark={isDark}
+          customFromDate={customFromDate}
+          customToDate={customToDate}
+          onCustomDateChange={handleCustomDateChange}
+          activeDashboard={activeDashboard}
+          onDashboardChange={setActiveDashboard}
+          onExport={handleExport}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
+        <SalesTargetDashboard />
       </div>
     );
   }
@@ -456,41 +474,68 @@ export default function DashboardPage() {
       />
 
       <div className="px-6 py-6">
-        {/* Metrics Grid */}
-        <MetricsGrid metrics={metrics} isLoading={isLoading} />
-
-        {/* Widgets Grid */}
-        <WidgetsGrid
-          widgets={activeWidgets}
-          onRemove={handleWidgetRemove}
-          onChartTypeChange={handleWidgetChartTypeChange}
-          onSizeChange={handleWidgetSizeChange}
-          onDuplicate={handleWidgetDuplicate}
-          onFullscreen={handleWidgetFullscreen}
-          onAddWidget={() => setShowCustomizer(true)}
-          isLoading={isLoading}
-          isDark={isDark}
-        />
-      </div>
-
-      {/* Customizer Modal */}
-        {showCustomizer && (
-          <DashboardCustomizer
-            isOpen={showCustomizer}
-            onClose={() => setShowCustomizer(false)}
-            availableWidgets={allWidgets}
-            activeWidgets={dashboardWidgets[activeDashboard]}
-            onSave={handleSaveCustomization}
+        {/* Gradient Metric Cards */}
+        {!isLoading && totals && (
+          <GradientMetricsGrid
+            income={totals.totalIncome}
+            expense={totals.totalExpense}
+            profit={totals.totalProfit}
+            profitMargin={totals.profitMargin}
             isDark={isDark}
+            isLoading={isProfitLossLoading}
           />
         )}
 
-      {/* Fullscreen Widget Modal */}
-      {fullscreenWidget && (
-        <WidgetFullscreenModal
-          isOpen={!!fullscreenWidget}
-          widget={fullscreenWidget}
-          onClose={() => setFullscreenWidget(null)}
+        {/* Loading State for Metrics */}
+        {isLoading && (
+          <GradientMetricsGrid
+            income={0}
+            expense={0}
+            profit={0}
+            profitMargin={0}
+            isDark={isDark}
+            isLoading={true}
+          />
+        )}
+
+        {/* Overview Widgets */}
+        {!isLoading && chartData && chartData.length > 0 && (
+          <OverviewWidgets 
+            data={chartData}
+            isDark={isDark}
+            year={Number.parseInt(year, 10) || new Date().getFullYear()}
+            dateRange={dateRange}
+            onFullscreen={() => {}} // Enable fullscreen icon
+          />
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="mt-6 text-center">
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              Loading dashboard data...
+            </p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && (!chartData || chartData.length === 0) && (
+          <div className="mt-6 text-center">
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              No data available for the selected period.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Customizer Modal */}
+      {showCustomizer && (
+        <DashboardCustomizer
+          isOpen={showCustomizer}
+          onClose={() => setShowCustomizer(false)}
+          availableWidgets={allWidgets}
+          activeWidgets={dashboardWidgets[activeDashboard]}
+          onSave={handleSaveCustomization}
           isDark={isDark}
         />
       )}

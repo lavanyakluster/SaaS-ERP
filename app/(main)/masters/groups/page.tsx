@@ -15,8 +15,7 @@ import {
 import { FolderTree } from 'lucide-react';
 
 export default function GroupMasterPage() {
-  const { theme, isDark } = useTheme();
-  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
+  const { theme } = useTheme();
   const { activeGradient } = useGradientStore();
 
   const [formData, setFormData] = useState({
@@ -90,7 +89,7 @@ export default function GroupMasterPage() {
         subtitle="Manage account grouping hierarchy"
         icon={FolderTree}
         gradient={activeGradient}
-        theme={themeMode}
+        theme={theme}
         onSave={handleSave}
         onDelete={handleDelete}
         onClear={handleClear}
@@ -102,7 +101,7 @@ export default function GroupMasterPage() {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <MasterFormCard theme={themeMode} maxWidth="5xl">
+          <MasterFormCard theme={theme} maxWidth="5xl">
             <div className="p-8">
               {/* Basic Information */}
               <MasterFormSection
@@ -110,7 +109,7 @@ export default function GroupMasterPage() {
                 subtitle="Define group hierarchy and properties"
                 columns={1}
                 gap={4}
-                theme={themeMode}
+                theme={theme}
               >
                 <MasterFormInput
                   value={formData.groupCode}
@@ -118,7 +117,7 @@ export default function GroupMasterPage() {
                   placeholder="e.g., GRP001"
                   label="Group Code"
                   required
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormInput
@@ -127,7 +126,7 @@ export default function GroupMasterPage() {
                   placeholder="e.g., Sales Accounts"
                   label="Group Name"
                   required
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormSelect
@@ -136,7 +135,7 @@ export default function GroupMasterPage() {
                   options={parentGroupOptions}
                   placeholder="Select Parent Group"
                   label="Parent Group"
-                  theme={themeMode}
+                  theme={theme}
                 />
 
                 <MasterFormSelect
@@ -146,7 +145,7 @@ export default function GroupMasterPage() {
                   placeholder="Select Nature"
                   label="Nature"
                   required
-                  theme={themeMode}
+                  theme={theme}
                 />
               </MasterFormSection>
 
@@ -160,7 +159,7 @@ export default function GroupMasterPage() {
                   'Liabilities, Capital, and Income are typically Credit nature',
                   'Parent groups help organize accounts logically'
                 ]}
-                theme={themeMode}
+                theme={theme}
                 variant="info"
                 className="mt-6"
               />

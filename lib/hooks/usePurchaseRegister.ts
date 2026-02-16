@@ -1,31 +1,34 @@
-/**
- * React Query hooks for Purchase Register API
- */
+'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  getPurchaseRegister,
+import { 
+  getPurchaseRegister, 
   getPurchaseRegisterDetail,
-  PurchaseRegisterParams,
-  PurchaseRegisterDetailParams,
-  PurchaseRegisterItem,
-  PurchaseRegisterDetailItem,
+  type PurchaseRegisterParams,
+  type PurchaseRegisterDetailParams,
+  type PurchaseRegisterItem,
+  type PurchaseRegisterDetailItem
 } from '@/lib/api/purchase-register.api';
 import { useAuthStore } from '@/lib/store/auth-store';
 
 /**
- * Hook to fetch purchase register data
- * Year is automatically injected from auth store
+ * Hook to fetch purchase register master data
  * 
  * @example
  * const { data, isLoading, error } = usePurchaseRegister({
- *   fromDt: '2026-01-01',
- *   toDt: '2026-01-30',
+ *   fromDt: '2025-01-01',
+ *   toDt: '2025-01-31',
  *   brCode: '0'
- * });
+ * }, true);
  */
-export const usePurchaseRegister = (params: Omit<PurchaseRegisterParams, 'year'>) => {
+export const usePurchaseRegister = (
+  params: Omit<PurchaseRegisterParams, 'year'>,
+  enabled: boolean = true
+) => {
+  const status = useAuthStore((state) => state.status);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const selectedYear = useAuthStore((state) => state.selectedYear);
+  const isAuthenticated = status === 'authenticated' && !isLoggingOut;
 
   return useQuery<PurchaseRegisterItem[], Error>({
     queryKey: ['purchase-register', params, selectedYear],
@@ -36,8 +39,10 @@ export const usePurchaseRegister = (params: Omit<PurchaseRegisterParams, 'year'>
       console.log('🚀 Fetching purchase register with year:', selectedYear);
       return getPurchaseRegister({ ...params, year: selectedYear });
     },
-    enabled: !!selectedYear && !!params.fromDt && !!params.toDt && !!params.brCode,
-    staleTime: 30000, // 30 seconds
+    enabled: enabled && isAuthenticated && !!selectedYear && !!params.fromDt && !!params.toDt && !!params.brCode,
+    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1,
   });
 };
@@ -68,7 +73,9 @@ export const usePurchaseRegisterDetail = (
       return getPurchaseRegisterDetail({ ...params, year: selectedYear });
     },
     enabled: enabled && !!selectedYear && !!params.shid && !!params.brCode,
-    staleTime: 30000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1,
   });
 };

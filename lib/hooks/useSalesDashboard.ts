@@ -50,7 +50,9 @@ export const useSalesDashboard = (
       return getSalesDashboard({ ...params, year: selectedYear });
     },
     enabled: enabled && !!selectedYear,
-    staleTime: 1000 * 60 * 5, // ⚡ 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1,
   });
 };

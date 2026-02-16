@@ -1,31 +1,29 @@
 /**
  * Social Login Hook using React Query
+ * Supports Microsoft OAuth authentication
  */
 
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { loginWithGoogle, loginWithMicrosoft, type GoogleAuthRequest, type MicrosoftAuthRequest, type LoginResponse } from '@/lib/api';
+import { loginWithMicrosoft, type MicrosoftAuthRequest, type LoginResponse } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 
-// Union type for social login requests
-export type SocialLoginRequest = GoogleAuthRequest | MicrosoftAuthRequest;
+export type SocialLoginRequest = MicrosoftAuthRequest;
 export type SocialLoginResponse = LoginResponse;
 
 interface UseSocialLoginOptions {
-  provider: 'google' | 'microsoft';
   onSuccess?: (data: LoginResponse) => void;
   onError?: (error: any) => void;
 }
 
 /**
- * Hook for social authentication (Google or Microsoft)
+ * Hook for Microsoft social authentication
  * 
  * Automatically stores tokens and updates auth state on success
  * 
  * @example
  * ```tsx
- * const { mutate: loginWithGoogle, isPending } = useSocialLogin({
- *   provider: 'google',
+ * const { mutate: loginWithMicrosoft, isPending } = useSocialLogin({
  *   onSuccess: (data) => {
  *     if (data.isNewUser) {
  *       router.push('/onboarding');
@@ -35,20 +33,17 @@ interface UseSocialLoginOptions {
  *   },
  * });
  * 
- * // After getting credential from Google SDK
- * loginWithGoogle({ credential: googleCredential });
+ * // After getting ID token from Microsoft OAuth
+ * loginWithMicrosoft({ Provider: 'Microsoft', IdToken: idToken });
  * ```
  */
-export const useSocialLogin = (options: UseSocialLoginOptions) => {
+export const useSocialLogin = (options?: UseSocialLoginOptions) => {
   const setTokens = useAuthStore((state) => state.setTokens);
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
     mutationFn: (data: SocialLoginRequest) => {
-      if (options.provider === 'google') {
-        return loginWithGoogle(data as GoogleAuthRequest);
-      }
-      return loginWithMicrosoft(data as MicrosoftAuthRequest);
+      return loginWithMicrosoft(data);
     },
     onSuccess: (data) => {
       // Store tokens and update auth state

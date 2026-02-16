@@ -4,7 +4,7 @@ interface MasterInfoBoxProps {
   title: string;
   items?: string[];
   children?: ReactNode;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   variant?: 'info' | 'warning' | 'success' | 'error';
   className?: string;
 }

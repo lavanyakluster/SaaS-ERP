@@ -3,92 +3,61 @@
  * Service layer for sales register endpoints
  */
 
-import axios from 'axios';
+import { apiClient } from './client';
 import type {
   SalesRegisterParams,
   SalesRegisterDetailParams,
-  SalesRegisterResponse,
-  SalesRegisterDetailResponse,
+  SalesRegisterRecord,
+  SalesRegisterDetailRecord,
 } from '@/lib/types/sales-register.types';
-
-// API Base URL
-const API_BASE_URL = 'http://corniche02.dyndns.org:8121/V1/api';
-
-// API Endpoints
-const ENDPOINTS = {
-  SALES_REGISTER: '/sales-register',
-  SALES_REGISTER_DETAIL: '/sales-register-det',
-} as const;
 
 /**
  * Fetches sales register master data
  * @param params - Filter parameters (date range, branch code, and year)
- * @param token - Authorization token
  * @returns Promise with sales register records
  */
-export const fetchSalesRegister = async (
-  params: SalesRegisterParams,
-  token: string
-): Promise<SalesRegisterResponse> => {
+export const getSalesRegister = async (
+  params: SalesRegisterParams
+): Promise<SalesRegisterRecord[]> => {
   try {
-    const response = await axios.get<SalesRegisterResponse>(
-      `${API_BASE_URL}${ENDPOINTS.SALES_REGISTER}`,
-      {
-        params: {
-          fromDt: params.fromDt,
-          toDt: params.toDt,
-          brCode: params.brCode,
-          year: params.year, // ✅ Added year parameter
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await apiClient.get<SalesRegisterRecord[]>('/sales-register', {
+      params: {
+        fromDt: params.fromDt,
+        toDt: params.toDt,
+        brCode: params.brCode,
+        year: params.year,
+      },
+    });
 
+    console.log('✅ Sales Register API Response:', response.data);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(
-        error.response?.data?.message || 'Failed to fetch sales register data'
-      );
-    }
-    throw new Error('An unexpected error occurred');
+    console.error('❌ Error fetching sales register:', error);
+    throw error;
   }
 };
 
 /**
  * Fetches sales register detail data for a specific bill
  * @param params - Detail parameters (sales header ID, branch code, and year)
- * @param token - Authorization token
  * @returns Promise with sales register detail records
  */
-export const fetchSalesRegisterDetail = async (
-  params: SalesRegisterDetailParams,
-  token: string
-): Promise<SalesRegisterDetailResponse> => {
+export const getSalesRegisterDetail = async (
+  params: SalesRegisterDetailParams
+): Promise<SalesRegisterDetailRecord[]> => {
   try {
-    const response = await axios.get<SalesRegisterDetailResponse>(
-      `${API_BASE_URL}${ENDPOINTS.SALES_REGISTER_DETAIL}`,
-      {
-        params: {
-          shid: params.shid,
-          brCode: params.brCode,
-          year: params.year, // ✅ Added year parameter
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await apiClient.get<SalesRegisterDetailRecord[]>('/sales-register-det', {
+      params: {
+        shid: params.shid,
+        brCode: params.brCode,
+        year: params.year,
+      },
+    });
 
+    console.log('✅ Sales Register Detail API Response:', response.data);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(
-        error.response?.data?.message || 'Failed to fetch sales register details'
-      );
-    }
-    throw new Error('An unexpected error occurred');
+    console.error('❌ Error fetching sales register detail:', error);
+    throw error;
   }
 };

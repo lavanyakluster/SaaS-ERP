@@ -17,7 +17,7 @@ import { Logo } from '@/components/common';
 
 interface ModernLoginLayoutProps {
   children: ReactNode;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function ModernLoginLayout({ children, theme = 'dark' }: ModernLoginLayoutProps) {

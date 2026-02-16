@@ -11,7 +11,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'> {
   label?: string;
   error?: string;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   showStrength?: boolean;
   strengthScore?: number;
 }

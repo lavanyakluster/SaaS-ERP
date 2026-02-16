@@ -15,8 +15,7 @@ import {
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const { isDark } = useTheme();
-  const themeMode = isDark ? 'dark' : 'light';
+  const { theme } = useTheme();
   
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<{ email?: string; general?: string }>({});
@@ -68,11 +67,11 @@ export default function ForgotPasswordPage() {
   if (success) {
     return (
       <div className={`min-h-screen flex items-center justify-center p-6 ${
-        isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
+        theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
       }`}>
         <div className="w-full max-w-md">
           <div className={`rounded-3xl p-8 text-center ${
-            isDark
+            theme === 'dark'
               ? 'bg-gray-800 border border-gray-700'
               : 'bg-white shadow-2xl'
           }`}>
@@ -82,13 +81,13 @@ export default function ForgotPasswordPage() {
             </div>
             
             <h2 className={`text-2xl font-bold mb-3 ${
-              isDark ? 'text-white' : 'text-gray-900'
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>
               Check Your Email
             </h2>
             
             <p className={`mb-6 ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
               We've sent a password reset link to{' '}
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
@@ -97,12 +96,12 @@ export default function ForgotPasswordPage() {
             </p>
 
             <div className={`p-4 rounded-2xl mb-6 ${
-              isDark 
+              theme === 'dark' 
                 ? 'bg-emerald-900/20 border border-emerald-800' 
                 : 'bg-emerald-50 border border-emerald-200'
             }`}>
               <p className={`text-sm ${
-                isDark ? 'text-emerald-300' : 'text-emerald-800'
+                theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
               }`}>
                 Please check your inbox and spam folder. The link will expire in 24 hours.
               </p>
@@ -123,14 +122,14 @@ export default function ForgotPasswordPage() {
   // Form state
   return (
     <div className={`min-h-screen flex items-center justify-center p-6 ${
-      isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
+      theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
     }`}>
       <div className="w-full max-w-md">
         {/* Back Button */}
         <button
           onClick={handleBackToLogin}
           className={`mb-6 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-            isDark
+            theme === 'dark'
               ? 'text-gray-400 hover:text-white hover:bg-gray-800'
               : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'
           }`}
@@ -140,7 +139,7 @@ export default function ForgotPasswordPage() {
         </button>
 
         <div className={`rounded-3xl p-8 ${
-          isDark
+          theme === 'dark'
             ? 'bg-gray-800 border border-gray-700'
             : 'bg-white shadow-2xl'
         }`}>
@@ -152,11 +151,11 @@ export default function ForgotPasswordPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className={`text-3xl font-bold mb-2 ${
-              isDark ? 'text-white' : 'text-gray-900'
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>
               Forgot Password?
             </h2>
-            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+            <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
               No worries, we'll send you reset instructions
             </p>
           </div>
@@ -167,7 +166,7 @@ export default function ForgotPasswordPage() {
               <AlertMessage 
                 type="error" 
                 message={errors.general}
-                theme={themeMode}
+                theme={theme}
               />
             </div>
           )}
@@ -183,15 +182,15 @@ export default function ForgotPasswordPage() {
               error={errors.email}
               disabled={forgotPasswordMutation.isPending}
               icon={<Mail className="w-5 h-5" />}
-              theme={themeMode}
+              theme={theme}
             />
 
             <div className={`p-4 rounded-2xl text-sm ${
-              isDark 
+              theme === 'dark' 
                 ? 'bg-blue-900/20 border border-blue-800' 
                 : 'bg-blue-50 border border-blue-200'
             }`}>
-              <p className={isDark ? 'text-blue-300' : 'text-blue-800'}>
+              <p className={theme === 'dark' ? 'text-blue-300' : 'text-blue-800'}>
                 💡 <span className="font-semibold">Tip:</span> Enter the email associated with your account
               </p>
             </div>
@@ -209,7 +208,7 @@ export default function ForgotPasswordPage() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className={`text-sm ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
               Remember your password?{' '}
               <Link href="/login" className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">

@@ -416,7 +416,16 @@ const TopNavBar = React.memo(function TopNavBar() {
         isOpen={showAddOrgModal}
         onClose={() => setShowAddOrgModal(false)}
         onSubmit={async (data) => {
-          await createOrganizationMutation.mutateAsync(data as any);
+          await createOrganizationMutation.mutateAsync({
+            CompanyName: data.displayName,
+            Industry: 'Other',
+            Country: 'United Arab Emirates',
+            Currency: 'AED',
+            FiscalYearStart: 'January',
+            CompanyPhone: 'N/A',
+            CompanyEmail: `${data.name}@example.com`,
+            Timezone: 'Asia/Dubai',
+          });
         }}
       />
     </>

@@ -11,7 +11,7 @@ interface Plan {
 
 interface CurrentPlanCardProps {
   plan: Plan;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function CurrentPlanCard({ plan, theme = 'light' }: CurrentPlanCardProps) {

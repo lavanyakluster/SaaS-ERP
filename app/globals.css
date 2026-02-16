@@ -1,101 +1,51 @@
 @import "tailwindcss";
-@reference "tailwindcss";
 
-@layer base {
-  body {
-    @apply bg-white text-gray-900;
+body {
+  background-color: white;
+  color: #111827;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+button {
+  font-weight: 500;
+}
+
+/* Animation used in landing page */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-
-  h1 {
-    @apply text-2xl font-semibold;
-  }
-
-  h2 {
-    @apply text-xl font-semibold;
-  }
-
-  h3 {
-    @apply text-lg font-semibold;
-  }
-
-  button {
-    @apply font-medium;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@layer utilities {
-  /* Optimized animations with GPU acceleration */
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out forwards;
-  }
-
-  .animate-slide-in {
-    animation: slideIn 0.3s ease-out forwards;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-}
-
-/* Optimized scrollbar - only load when needed */
-@media (min-width: 1024px) {
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-  }
-
-  .dark ::-webkit-scrollbar-track {
-    background: #1f2937;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #10b981;
-    border-radius: 10px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #059669;
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background: #3b82f6;
-  }
-
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: #2563eb;
-  }
-}
-
-/* Prevent layout shift */
+/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Performance optimization - reduce repaints */
+/* Font smoothing for better text rendering */
 * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

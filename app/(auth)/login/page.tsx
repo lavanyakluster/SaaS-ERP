@@ -26,8 +26,7 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   
   // ✅ PERFORMANCE: Use theme store correctly
-  const { theme, isDark } = useTheme();
-  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
+  const { theme } = useTheme();
   
   // 🐛 DEBUG: Track component renders
   if (process.env.NODE_ENV === 'development') {
@@ -41,7 +40,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
-  const [socialLoading, setSocialLoading] = useState<'microsoft' | null>(null);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'microsoft' | null>(null);
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
 
   // Helper function to handle successful login redirection
@@ -49,7 +48,7 @@ export default function LoginPage() {
     console.log('🔄 handleLoginSuccess called:', data);
     
     // ✅ Status and cookie are ALREADY set in useLogin hook - just handle routing
-    if (data.isNewUser) {
+    if (data.isNewUser === true) {
       console.log('📍 New user - redirecting to tenant-setup');
       router.push('/tenant-setup');
     } else {
@@ -155,10 +154,10 @@ export default function LoginPage() {
 
     setErrors({});
     
-    // Trigger the login mutation
+    // Trigger the login mutation with capitalized field names (API requirement)
     loginMutation.mutate({
-      email: email,
-      password: password,
+      Email: email,
+      Password: password,
     });
   }, [email, password, loginMutation]);
 
@@ -171,19 +170,19 @@ export default function LoginPage() {
   }
 
   return (
-    <ModernLoginLayout theme={themeMode}>
+    <ModernLoginLayout theme={theme}>
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <SecureBadge theme={themeMode} />
+          <SecureBadge theme={theme} />
           
           <h1 className={`text-3xl font-bold mb-2 ${
-            isDark ? 'text-white' : 'text-gray-900'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
             Sign in
           </h1>
           <p className={`${
-            isDark ? 'text-gray-400' : 'text-gray-600'
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}>
             Continue to your SmartBook account
           </p>
@@ -194,7 +193,7 @@ export default function LoginPage() {
           <AlertMessage 
             type="error" 
             message={errors.general}
-            theme={themeMode}
+            theme={theme}
           />
         )}
 
@@ -204,7 +203,7 @@ export default function LoginPage() {
             type="success"
             title="Email verified successfully!"
             message="Please sign in to set up your organization"
-            theme={themeMode}
+            theme={theme}
           />
         )}
 
@@ -220,7 +219,7 @@ export default function LoginPage() {
             disabled={loginMutation.isPending}
             error={errors.email}
             icon={<User className="w-5 h-5" />}
-            theme={themeMode}
+            theme={theme}
           />
 
           {/* Password */}
@@ -231,7 +230,7 @@ export default function LoginPage() {
             placeholder="••••••••"
             disabled={loginMutation.isPending}
             error={errors.password}
-            theme={themeMode}
+            theme={theme}
           />
 
           {/* Forgot Password */}
@@ -256,15 +255,14 @@ export default function LoginPage() {
         </form>
 
         {/* Divider */}
-        <FormDivider theme={themeMode} />
+        <FormDivider theme={theme} />
 
         {/* Social Login */}
         <SocialAuthButtons
-          theme={themeMode}
+          theme={theme}
           disabled={loginMutation.isPending}
-          microsoftLoading={microsoftAuth.isLoading}
+          isLoading={microsoftAuth.isLoading}
           onMicrosoftClick={() => {
-            setSocialLoading('microsoft');
             setErrors({});
             microsoftAuth.loginWithMicrosoft();
           }}
@@ -273,7 +271,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center">
           <p className={`text-sm ${
-            isDark ? 'text-gray-400' : 'text-gray-600'
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}>
             Don't have an account?{' '}
             <Link href="/signup" className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">

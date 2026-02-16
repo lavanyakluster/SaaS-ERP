@@ -212,7 +212,7 @@ function ResetPasswordContent() {
 
     // Submit password reset
     try {
-      await resetPassword({ token, NewPassword: password });
+      await resetPassword({ token, newPassword: password });
     } catch (err) {
       setErrors({ general: 'Failed to reset password. Please try again or request a new reset link.' });
     }
@@ -248,7 +248,6 @@ function ResetPasswordContent() {
             type="success"
             title="Password Reset Successful!"
             message="Your password has been reset successfully. Redirecting to login..."
-            icon={CheckCircle2}
           />
         )}
 
@@ -258,7 +257,6 @@ function ResetPasswordContent() {
             type="error"
             title="Reset Failed"
             message={errors.general || hookError || 'An error occurred'}
-            icon={AlertCircle}
           />
         )}
 

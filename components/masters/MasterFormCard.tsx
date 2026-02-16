@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 
 interface MasterFormCardProps {
   children: ReactNode;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   maxWidth?: 'full' | '7xl' | '6xl' | '5xl';
   className?: string;
 }

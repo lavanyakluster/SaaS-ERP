@@ -1,54 +1,47 @@
-"use client"
 import dynamic from 'next/dynamic';
 import { NavBar } from "@/components/landing/NavBar";
 import { HeroSection } from "@/components/landing/HeroSection";
 
-// Lazy load below-the-fold sections with no SSR
+// Lazy load below-the-fold sections for better performance
 // Using named exports with dynamic import
-const FeaturesSection = dynamic<any>(
+const FeaturesSection = dynamic(
   () => import('@/components/landing/FeaturesSection').then(mod => mod.FeaturesSection),
   { 
-    ssr: false,
     loading: () => <div className="min-h-[400px]" />
   }
 );
 
-const BenefitsSection = dynamic<any>(
+const BenefitsSection = dynamic(
   () => import('@/components/landing/BenefitsSection').then(mod => mod.BenefitsSection),
   { 
-    ssr: false,
     loading: () => <div className="min-h-[400px]" />
   }
 );
 
-const HowItWorksSection = dynamic<any>(
+const HowItWorksSection = dynamic(
   () => import('@/components/landing/HowItWorksSection').then(mod => mod.HowItWorksSection),
   { 
-    ssr: false,
     loading: () => <div className="min-h-[400px]" />
   }
 );
 
-const PricingSection = dynamic<any>(
+const PricingSection = dynamic(
   () => import('@/components/landing/PricingSection').then(mod => mod.PricingSection),
   { 
-    ssr: false,
     loading: () => <div className="min-h-[400px]" />
   }
 );
 
-const CTASection = dynamic<any>(
+const CTASection = dynamic(
   () => import('@/components/landing/CTASection').then(mod => mod.CTASection),
   { 
-    ssr: false,
     loading: () => <div className="min-h-[200px]" />
   }
 );
 
-const Footer = dynamic<any>(
+const Footer = dynamic(
   () => import('@/components/landing/Footer').then(mod => mod.Footer),
   { 
-    ssr: false,
     loading: () => <div className="min-h-[300px]" />
   }
 );

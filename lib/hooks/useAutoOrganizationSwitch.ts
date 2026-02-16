@@ -2,14 +2,12 @@
  * Auto Organization Switch Hook
  * 
  * Automatically switches to the first organization after login
- * and fetches the year list
  */
 
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useOrganizations } from './useOrganizations';
 import { useSwitchOrganization } from './useSwitchOrganization';
-import { useYears } from './useYears';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const useAutoOrganizationSwitch = () => {
@@ -32,9 +30,8 @@ export const useAutoOrganizationSwitch = () => {
       setShouldShowOrgSwitcher(false);
       hasSwitched.current = false;
       
-      // Invalidate years query to trigger refetch
-      queryClient.invalidateQueries({ queryKey: ['years'] });
-      console.log('🔄 Triggering year list fetch after organization switch');
+      // ⚡ OPTIMIZED: Don't invalidate years here - components will fetch it when needed
+      console.log('✅ Organization switched, components will fetch years automatically');
     },
     onError: (error) => {
       console.error('❌ Auto organization switch failed:', error);
@@ -42,9 +39,6 @@ export const useAutoOrganizationSwitch = () => {
       hasSwitched.current = false;
     },
   });
-
-  // Fetch years (will be triggered after org switch via invalidation)
-  const { data: years, isLoading: yearsLoading } = useYears();
 
   useEffect(() => {
     // Only proceed if:
@@ -84,6 +78,5 @@ export const useAutoOrganizationSwitch = () => {
 
   return {
     isAutoSwitching: isSwitching && shouldShowOrgSwitcher,
-    yearsLoaded: !!years && !yearsLoading,
   };
 };

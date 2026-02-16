@@ -1,9 +1,9 @@
 /**
- * Permissions Utilities
+ * Permission Utilities
  * Helper functions for transforming permissions data
  */
 
-import { CrudPermission } from '@/hooks/usePermissions';
+import { CrudPermission } from '@/lib/hooks/usePermissions';
 
 /**
  * Transform module permissions to API format

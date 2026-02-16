@@ -4,7 +4,7 @@ import { Building2, Globe2, Users, TrendingUp, Shield, Award, Check, Star, Zap, 
 import { motion } from 'motion/react';
 
 interface EnterpriseCarouselProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export const EnterpriseCarousel = ({ theme = 'dark' }: EnterpriseCarouselProps) => {

@@ -3,7 +3,7 @@ interface MasterFormCheckboxProps {
   onChange: (checked: boolean) => void;
   label: string;
   disabled?: boolean;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   className?: string;
 }
 

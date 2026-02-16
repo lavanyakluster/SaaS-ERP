@@ -9,7 +9,7 @@ interface Stat {
 
 interface BillingStatsProps {
   stats: Stat[];
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function BillingStats({ stats, theme = 'light' }: BillingStatsProps) {

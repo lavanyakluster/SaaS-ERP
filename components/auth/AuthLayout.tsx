@@ -5,7 +5,7 @@ interface AuthLayoutProps {
   rightContent?: ReactNode;
   children?: ReactNode;
   sidebar?: ReactNode;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   className?: string;
 }
 

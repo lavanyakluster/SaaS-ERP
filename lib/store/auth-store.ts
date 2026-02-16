@@ -328,6 +328,14 @@ export const useAuthStore = createWithEqualityFn<AuthStore>()(
 
     // Token Actions
     setTokens: (accessToken, refreshToken, expiresIn) => {
+      console.log('🔑 setTokens called with:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        expiresIn,
+        expiresInType: typeof expiresIn,
+        callStack: new Error().stack?.split('\n').slice(1, 4).join('\n'),
+      });
+
       // CRITICAL: Ensure tokens are strings, not objects
       const accessTokenStr = typeof accessToken === 'string' ? accessToken : String(accessToken);
       const refreshTokenStr = typeof refreshToken === 'string' ? refreshToken : String(refreshToken);
@@ -359,6 +367,14 @@ export const useAuthStore = createWithEqualityFn<AuthStore>()(
         expiresIn,
         expiresAt,
       };
+
+      console.log('✅ Tokens object created:', {
+        expiresIn: tokens.expiresIn,
+        expiresInMinutes: tokens.expiresIn ? Math.floor(tokens.expiresIn / 60) : null,
+        expiresAt: tokens.expiresAt,
+        expiresAtISO: tokens.expiresAt ? new Date(tokens.expiresAt).toISOString() : null,
+        timeUntilExpiry: tokens.expiresAt ? `${Math.floor((tokens.expiresAt - Date.now()) / 1000)}s` : null,
+      });
 
       // ✅ CRITICAL: Reset isLoggingOut flag when setting new tokens (during login)
       set({ tokens, isLoggingOut: false });

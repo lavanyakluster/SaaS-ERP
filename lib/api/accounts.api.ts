@@ -42,6 +42,21 @@ export interface AccountsParams {
   year: string;          // ✅ Year parameter (e.g., "2026")
 }
 
+// ✅ NEW: Cumulation Request Parameters
+export interface CumulationParams {
+  fromDt: string;        // Format: YYYY-MM-DD
+  toDt: string;          // Format: YYYY-MM-DD
+  brCode: string;        // Branch code
+  year: string;          // Year parameter (e.g., "2026")
+}
+
+// ✅ NEW: Cumulation Response
+export interface CumulationResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================
@@ -76,6 +91,30 @@ export async function getAccounts(params: AccountsParams): Promise<AccountsRespo
   } catch (error: any) {
     console.error('❌ Failed to fetch accounts data:', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch accounts data');
+  }
+}
+
+/**
+ * ✅ NEW: Manual Cumulation
+ * Triggers manual cumulation for account data
+ */
+export async function performManualCumulation(params: CumulationParams): Promise<CumulationResponse> {
+  try {
+    console.log('🔄 Performing manual cumulation:', params);
+
+    const response = await apiClient.post<CumulationResponse>('/accounts/cumulate', {
+      fromDt: params.fromDt,
+      toDt: params.toDt,
+      brCode: params.brCode,
+      year: params.year,
+    });
+
+    console.log('✅ Manual cumulation completed successfully');
+
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Failed to perform manual cumulation:', error);
+    throw new Error(error.response?.data?.message || 'Failed to perform manual cumulation');
   }
 }
 

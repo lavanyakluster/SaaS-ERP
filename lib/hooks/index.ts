@@ -27,11 +27,17 @@ export * from './useBranches';
 export * from './useYears';
 export * from './useProfitLoss';
 export * from './useSalesDashboard';
+export * from './useLoyaltyDashboard';
+export * from './useSalesTarget';
 export * from './useSalesSummary';
+export * from './useSalesConversion';
+export * from './useSalesRegister';
+export * from './useSalesReturn';
 export * from './useDateRange';
 export * from './useBranchCode';
 export * from './usePurchaseRegister';
 export * from './usePurchaseReturn';
+export * from './useQuotesStatus';
 
 export * from './useMicrosoftAuth';
 
@@ -40,3 +46,9 @@ export * from './useMicrosoftAuth';
 // ============================================================================
 
 export * from './usePageTheme';
+
+// ============================================================================
+// PERMISSIONS HOOKS
+// ============================================================================
+
+export * from './usePermissions';

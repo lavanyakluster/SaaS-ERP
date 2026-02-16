@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import Link from 'next/link';
+import React, { useState, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, ChevronDown, TrendingUp } from 'lucide-react';
+import { NAVIGATION_MENU } from '@/lib/constants/navigation';
 import { useThemeStore } from '@/lib/store/theme-store';
 import { useGradientStore } from '@/lib/store/gradient-store';
-import { ChevronLeft, ChevronRight, ChevronDown, TrendingUp } from 'lucide-react';
-import { NAVIGATION_MENU } from '@/config/navigation';
-import React from 'react';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -30,7 +29,11 @@ const Sidebar = React.memo(function Sidebar({ collapsed, onToggle }: SidebarProp
 
   const isActive = useCallback((href?: string) => {
     if (!href) return false;
-    return pathname === href;
+    // Exact match for dashboard sub-routes
+    if (pathname === href) return true;
+    // For /dashboard main route, also match /dashboard/loyalty and /dashboard/sales-target
+    if (href === '/dashboard' && pathname.startsWith('/dashboard')) return false; // Don't highlight Overview for sub-dashboards
+    return false;
   }, [pathname]);
 
   // Memoize gradient button styles

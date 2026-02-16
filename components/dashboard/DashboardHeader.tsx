@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Building2, Calendar, ChevronDown, Search, Check, X, LayoutDashboard, TrendingUp, Wallet, Package, Target, Download, RefreshCw } from 'lucide-react';
+import { Building2, ChevronDown, Search, Check, LayoutDashboard, TrendingUp, Wallet, Package, Target, Download, RefreshCw, Award, BarChart2 } from 'lucide-react';
 import type { Branch } from '@/lib/api';
+import { DateRangeFilterWrapper } from './DateRangeFilterWrapper';
 
-type DashboardType = 'overview' | 'sales' | 'account' | 'item' | 'salekpi';
+type DashboardType = 'overview' | 'sales' | 'account' | 'item' | 'sales-kpi' | 'loyalty' | 'sales-target';
 
 interface DashboardHeaderProps {
   firm: string;
@@ -27,16 +28,18 @@ interface DashboardHeaderProps {
   // Account dashboard specific props
   isCumulative?: boolean;
   onCumulativeChange?: (checked: boolean) => void;
+  onCumulate?: () => void; // ✅ NEW: Manual cumulation handler
+  isCumulating?: boolean;   // ✅ NEW: Cumulation loading state
 }
-
-const DATE_RANGES = ['Today', 'This Week', 'This Month', 'This Quarter', 'Year 2025', 'Custom Range'];
 
 const DASHBOARD_TABS = [
   { id: 'overview' as DashboardType, label: 'Overview', icon: LayoutDashboard },
   { id: 'sales' as DashboardType, label: 'Sales', icon: TrendingUp },
   { id: 'account' as DashboardType, label: 'Account', icon: Wallet },
   { id: 'item' as DashboardType, label: 'Item', icon: Package },
-  { id: 'salekpi' as DashboardType, label: 'Sale KPI', icon: Target },
+  { id: 'sales-kpi' as DashboardType, label: 'Sale KPI', icon: Target },
+  { id: 'loyalty' as DashboardType, label: 'Loyalty', icon: Award },
+  { id: 'sales-target' as DashboardType, label: 'Sales Target', icon: BarChart2 },
 ];
 
 export function DashboardHeader({
@@ -60,13 +63,11 @@ export function DashboardHeader({
   // Account dashboard specific props
   isCumulative,
   onCumulativeChange,
+  onCumulate,
+  isCumulating,
 }: DashboardHeaderProps) {
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
-  const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [branchSearchQuery, setBranchSearchQuery] = useState('');
-  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
-  const [tempFromDate, setTempFromDate] = useState(customFromDate || '');
-  const [tempToDate, setTempToDate] = useState(customToDate || '');
 
   // Filter branches based on search query
   const filteredBranches = branches.filter(branch =>
@@ -79,28 +80,10 @@ export function DashboardHeader({
     setBranchSearchQuery('');
   };
 
-  const handleDateSelect = (range: string) => {
-    if (range === 'Custom Range') {
-      setShowCustomDatePicker(true);
-      setShowDateDropdown(false);
-    } else {
-      onDateRangeChange(range);
-      setShowDateDropdown(false);
+  const handleDateRangeApply = (fromDate: string, toDate: string) => {
+    if (onCustomDateChange) {
+      onCustomDateChange(fromDate, toDate);
     }
-  };
-
-  const handleApplyCustomDate = () => {
-    if (tempFromDate && tempToDate && onCustomDateChange) {
-      onCustomDateChange(tempFromDate, tempToDate);
-      onDateRangeChange('Custom Range');
-      setShowCustomDatePicker(false);
-    }
-  };
-
-  const handleCancelCustomDate = () => {
-    setShowCustomDatePicker(false);
-    setTempFromDate(customFromDate || '');
-    setTempToDate(customToDate || '');
   };
 
   return (
@@ -253,138 +236,15 @@ export function DashboardHeader({
               )}
             </div>
 
-            {/* Date Range Selector */}
-            <div className="relative">
-              <button
-                onClick={() => setShowDateDropdown(!showDateDropdown)}
-                className={`pl-10 pr-4 py-2.5 rounded-lg border text-sm font-medium transition-all hover:shadow-md min-w-[150px] flex items-center justify-between ${
-                  isDark
-                    ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                    : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Calendar className="absolute left-3 w-4 h-4" />
-                <span className="truncate">{dateRange}</span>
-                <ChevronDown className="w-4 h-4 ml-2" />
-              </button>
-
-              {showDateDropdown && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowDateDropdown(false)}
-                  />
-                  <div className={`absolute right-0 top-12 w-48 rounded-lg border shadow-2xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
-                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                  }`}>
-                    <div className="py-1">
-                      {DATE_RANGES.map((range) => (
-                        <button
-                          key={range}
-                          onClick={() => handleDateSelect(range)}
-                          className={`w-full px-4 py-2.5 text-left text-sm transition-all flex items-center justify-between ${
-                            dateRange === range
-                              ? isDark
-                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
-                                : 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-l-4 border-blue-600'
-                              : isDark
-                                ? 'text-gray-200 hover:bg-gray-700'
-                                : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          <span>{range}</span>
-                          {dateRange === range && (
-                            <Check className="w-4 h-4" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Custom Date Picker Modal */}
-            {showCustomDatePicker && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={handleCancelCustomDate}
-                />
-                <div className={`absolute right-0 top-12 w-72 rounded-lg border shadow-2xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
-                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                  <div className={`p-4 border-b ${
-                    isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <h3 className={`text-sm font-semibold ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>Custom Date Range</h3>
-                  </div>
-                  
-                  <div className="p-4 space-y-4">
-                    {/* From Date */}
-                    <div>
-                      <label className={`block text-xs font-medium mb-2 ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      }`}>
-                        From Date
-                      </label>
-                      <input
-                        type="date"
-                        value={tempFromDate}
-                        onChange={(e) => setTempFromDate(e.target.value)}
-                        className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                          isDark
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
-                    </div>
-
-                    {/* To Date */}
-                    <div>
-                      <label className={`block text-xs font-medium mb-2 ${
-                        isDark ? 'text-gray-300' : 'text-gray-700'
-                      }`}>
-                        To Date
-                      </label>
-                      <input
-                        type="date"
-                        value={tempToDate}
-                        onChange={(e) => setTempToDate(e.target.value)}
-                        className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                          isDark
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        onClick={handleCancelCustomDate}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          isDark
-                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleApplyCustomDate}
-                        disabled={!tempFromDate || !tempToDate}
-                        className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Date Range Selector or Custom Date Picker */}
+            <DateRangeFilterWrapper
+              dateRange={dateRange}
+              onDateRangeChange={onDateRangeChange}
+              customFromDate={customFromDate}
+              customToDate={customToDate}
+              onCustomDateApply={handleDateRangeApply}
+              isDark={isDark}
+            />
 
             {/* Export Button */}
             {onExport && (
@@ -452,7 +312,7 @@ export function DashboardHeader({
                 type="checkbox"
                 checked={isCumulative}
                 onChange={(e) => onCumulativeChange(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-emerald-600"
               />
               <span className={`text-sm font-medium ${
                 isDark ? 'text-gray-300' : 'text-gray-700'

@@ -14,7 +14,7 @@ interface AvailablePlansGridProps {
   plans: Plan[];
   selectedPlan: string;
   onSelectPlan: (planName: string) => void;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function AvailablePlansGrid({ 

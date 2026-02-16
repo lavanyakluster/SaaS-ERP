@@ -33,19 +33,15 @@ export interface LoginResponse {
 }
 
 export interface MicrosoftAuthRequest {
+  Provider: 'Microsoft';
   IdToken: string;
-  Provider?: 'Microsoft' | 'microsoft';
-}
-
-export interface GoogleAuthRequest {
-  credential: string;
 }
 
 export interface SignupRequest {
   name: string;
   email: string;
   password: string;
-  provider: 'local' | 'google' | 'microsoft';
+  provider: 'local' | 'microsoft';
 }
 
 export interface SignupResponse {
@@ -71,7 +67,7 @@ export interface SendOtpResponse {
 
 export interface VerifyOtpRequest {
   Email: string;
-  Otp: string;
+  OTP: string;
 }
 
 export interface VerifyOtpResponse {
@@ -94,11 +90,12 @@ export interface ForgotPasswordResponse {
 
 export interface ResetPasswordRequest {
   token: string;
-  NewPassword: string;
+  newPassword: string;
 }
 
 export interface ResetPasswordResponse {
-  success: boolean;
+  success?: boolean;
+  status?: 'success' | 'error' | string;
   message: string;
 }
 
@@ -110,6 +107,20 @@ export interface CreatePasswordRequest {
 export interface CreatePasswordResponse {
   success: boolean;
   message: string;
+}
+
+// ✅ NEW: Refresh Token Types
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
 }
 
 // ============================================================================
@@ -124,6 +135,18 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
     Email: credentials.Email,
     Password: credentials.Password,
   });
+  
+  console.log('🔍 Raw Axios Response from /login:', {
+    data: response.data,
+    status: response.status,
+    headers: response.headers,
+  });
+  console.log('🔍 expiresIn in response.data:', {
+    expiresIn: response.data.expiresIn,
+    type: typeof response.data.expiresIn,
+    rawValue: JSON.stringify(response.data.expiresIn),
+  });
+  
   return response.data;
 };
 
@@ -131,15 +154,7 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
  * Login with Microsoft OAuth
  */
 export const loginWithMicrosoft = async (data: MicrosoftAuthRequest): Promise<LoginResponse> => {
-  const response = await apiClient.post<LoginResponse>('/auth/microsoft', data);
-  return response.data;
-};
-
-/**
- * Login with Google OAuth
- */
-export const loginWithGoogle = async (data: GoogleAuthRequest): Promise<LoginResponse> => {
-  const response = await apiClient.post<LoginResponse>('/auth/google', data);
+  const response = await apiClient.post<LoginResponse>('/social-login', data);
   return response.data;
 };
 
@@ -194,12 +209,24 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
 };
 
 /**
- * Refresh access token
- */
-/**
  * Create password for invited users
  */
 export const createPassword = async (data: CreatePasswordRequest): Promise<CreatePasswordResponse> => {
   const response = await apiClient.post<CreatePasswordResponse>('/create-password', data);
   return response.data;
+};
+
+/**
+ * Refresh token
+ */
+export const refreshToken = async (data: RefreshTokenRequest): Promise<RefreshTokenResponse> => {
+  const response = await apiClient.post<RefreshTokenResponse>('/refresh-token', data);
+  const payload = response.data as RefreshTokenResponse;
+
+  return {
+    ...payload,
+    accessToken: payload.accessToken ?? payload.access_token ?? '',
+    refreshToken: payload.refreshToken ?? payload.refresh_token ?? '',
+    expiresIn: payload.expiresIn ?? payload.expires_in ?? 0,
+  };
 };

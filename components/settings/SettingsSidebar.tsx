@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Building2, Palette, Globe, Server, Layers, Shield, Activity,
   Users, User, LayoutDashboard, DollarSign, FileText,
   Database, Zap, Key, Webhook, ExternalLink, Lock, Clock,
-  CreditCard, Crown, Settings as SettingsIcon, Search
+  CreditCard, Crown, Settings as SettingsIcon, X
 } from 'lucide-react';
 
 // ============================================
@@ -28,6 +27,7 @@ interface SettingsSidebarProps {
   onSectionChange: (section: string) => void;
   isDark: boolean;
   organizationName?: string;
+  onClose?: () => void;
 }
 
 interface SectionItem {
@@ -43,8 +43,6 @@ interface NavigationCategory {
   icon: any;
   sections: SectionItem[];
 }
-
-export type SettingsNavItem = NavigationCategory;
 
 // ============================================
 // CONSTANTS
@@ -259,10 +257,9 @@ export function SettingsSidebar({
   onCategoryChange,
   onSectionChange,
   isDark,
-  organizationName = DEFAULT_ORGANIZATION_NAME
+  organizationName = DEFAULT_ORGANIZATION_NAME,
+  onClose
 }: SettingsSidebarProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-
   const settingsNavigation = SETTINGS_NAVIGATION;
 
   return (
@@ -271,36 +268,35 @@ export function SettingsSidebar({
     }`}>
       {/* Header */}
       <div className={`p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-            <SettingsIcon className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+              <SettingsIcon className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className={`font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Settings
+              </h2>
+              <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {organizationName}
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Settings
-            </h2>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {organizationName}
-            </p>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-            isDark ? 'text-gray-500' : 'text-gray-400'
-          }`} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search settings..."
-            className={`w-full pl-9 pr-3 py-2 rounded-lg text-sm transition-colors ${
-              isDark
-                ? 'bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:border-emerald-500'
-                : 'bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-emerald-500'
-            } focus:outline-none`}
-          />
+          
+          {/* Close Button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
+                isDark
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300'
+                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+              }`}
+              title="Close settings"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 

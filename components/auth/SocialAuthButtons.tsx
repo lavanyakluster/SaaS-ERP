@@ -6,34 +6,32 @@
  */
 
 interface SocialAuthButtonsProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   disabled?: boolean;
-  isLoading?: 'microsoft' | null;
+  isLoading?: boolean;
   onMicrosoftClick: () => void;
-  microsoftLoading?: boolean;
 }
 
 export function SocialAuthButtons({
   theme = 'light',
   disabled = false,
-  isLoading = null,
+  isLoading = false,
   onMicrosoftClick,
-  microsoftLoading = false,
 }: SocialAuthButtonsProps) {
   return (
-    <div className="grid grid-cols-1 gap-3">
-      {/* Microsoft Button */}
+    <div className="w-full">
+      {/* Microsoft Button - Full Width */}
       <button
         type="button"
         onClick={onMicrosoftClick}
-        disabled={disabled || isLoading !== null || microsoftLoading}
-        className={`py-2.5 px-4 rounded-lg font-medium border transition-all flex items-center justify-center gap-2.5 min-h-[40px] ${
+        disabled={disabled || isLoading}
+        className={`w-full py-2.5 px-4 rounded-lg font-medium border transition-all flex items-center justify-center gap-2.5 min-h-[40px] ${
           theme === 'dark'
             ? 'bg-[#1a1a1a] border-[#8e8e8e] text-white hover:bg-[#292929]'
             : 'bg-white border-[#dadce0] text-[#3c4043] hover:bg-[#f8f9fa] hover:border-[#d2e3fc]'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        {(isLoading === 'microsoft' || microsoftLoading) ? (
+        {isLoading ? (
           <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
         ) : (
           <>

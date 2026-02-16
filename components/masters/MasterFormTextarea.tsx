@@ -8,7 +8,7 @@ interface MasterFormTextareaProps {
   disabled?: boolean;
   required?: boolean;
   rows?: number;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   className?: string;
 }
 

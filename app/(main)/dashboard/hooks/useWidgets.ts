@@ -18,12 +18,15 @@ export const useWidgets = (activeDashboard: DashboardType, chartData?: ChartData
     'profit-margin': 'column',
   });
 
+  // Dashboard widgets mapping - MUST include ALL dashboard types
   const [dashboardWidgets, setDashboardWidgets] = useState<Record<DashboardType, string[]>>({
     overview: ['revenue-trend', 'top-profit', 'expense-breakdown', 'income-distribution'],
     sales: ['sales-trend', 'top-products', 'sales-by-region'],
     account: ['account-balance', 'receivables', 'payables', 'cash-flow'],
     item: ['inventory-levels', 'top-items', 'item-movement'],
-    salekpi: ['kpi-revenue', 'kpi-conversion', 'kpi-targets'],
+    'sales-kpi': ['kpi-revenue', 'kpi-conversion', 'kpi-targets'],
+    loyalty: [], // No widgets for loyalty dashboard (has its own component)
+    'sales-target': [], // No widgets for sales target dashboard (has its own component)
   });
 
   const [widgetSizes, setWidgetSizes] = useState<Record<string, WidgetSize>>({
@@ -112,18 +115,14 @@ export const useWidgets = (activeDashboard: DashboardType, chartData?: ChartData
       },
       {
         id: 'expense-breakdown',
-        title: 'Expenses',
+        title: 'Expense Breakdown',
         subtitle: 'No Data',
         chartType: widgetChartTypes['expense-breakdown'],
         category: 'Overview',
         size: widgetSizes['expense-breakdown'],
         data: [],
         dataKeys: [
-          { key: 'value', label: 'Amount', color: '#3b82f6' },
-          { key: 'value', label: 'Amount', color: '#10b981' },
-          { key: 'value', label: 'Amount', color: '#f59e0b' },
-          { key: 'value', label: 'Amount', color: '#ef4444' },
-          { key: 'value', label: 'Amount', color: '#8b5cf6' },
+          { key: 'expense', label: 'Expense', color: '#8b5cf6' },
         ],
       },
       {
@@ -142,8 +141,16 @@ export const useWidgets = (activeDashboard: DashboardType, chartData?: ChartData
     ];
   }, [widgetChartTypes, widgetSizes, activeDashboard, chartData]);
 
+  // Filter active widgets with safety check
   const activeWidgets = useMemo(() => {
     const widgetIds = dashboardWidgets[activeDashboard];
+    
+    // Safety check: return empty array if widgetIds is undefined or not an array
+    if (!widgetIds || !Array.isArray(widgetIds)) {
+      console.warn(`No widget configuration found for dashboard: ${activeDashboard}`);
+      return [];
+    }
+    
     return allWidgets.filter((w) => widgetIds.includes(w.id));
   }, [activeDashboard, dashboardWidgets, allWidgets]);
 

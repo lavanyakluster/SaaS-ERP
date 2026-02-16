@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 interface HeroSectionProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function HeroSection({ theme = 'light' }: HeroSectionProps) {

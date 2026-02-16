@@ -9,7 +9,7 @@ interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'cl
   label: string;
   error?: string;
   icon?: ReactNode;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function FormInput({ 

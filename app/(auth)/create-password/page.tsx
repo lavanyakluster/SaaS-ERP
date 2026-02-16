@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
+import { Shield, CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
 import { useTheme } from '@/lib/store/theme-store';
 import { useMutation } from '@tanstack/react-query';
 import { createPassword } from '@/lib/api/auth.api';
@@ -259,7 +259,6 @@ function CreatePasswordContent() {
             type="success"
             title="Password Created Successfully!"
             message="Your password has been set. Redirecting to login..."
-            icon={CheckCircle2}
           />
         )}
 
@@ -269,7 +268,6 @@ function CreatePasswordContent() {
             type="error"
             title="Setup Failed"
             message={errors.general}
-            icon={AlertCircle}
           />
         )}
 

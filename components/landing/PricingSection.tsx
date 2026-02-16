@@ -14,7 +14,7 @@ interface Plan {
 
 interface PricingSectionProps {
   plans: Plan[];
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 // Icon mapping with emojis

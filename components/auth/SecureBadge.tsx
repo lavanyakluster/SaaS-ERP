@@ -7,7 +7,7 @@ import { Sparkles } from 'lucide-react';
 
 interface SecureBadgeProps {
   text?: string;
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export function SecureBadge({ text = 'SECURE LOGIN', theme = 'light' }: SecureBadgeProps) {

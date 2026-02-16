@@ -4,7 +4,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { verifyOtp, type VerifyOtpRequest, type VerifyOtpResponse } from '@/lib/api';
+import { verifyOtp, type VerifyOtpResponse } from '@/lib/api';
 
 interface UseVerifyOtpOptions {
   onSuccess?: (data: VerifyOtpResponse) => void;

@@ -107,8 +107,14 @@ export function formatFileSize(bytes: number): string {
  * @param date - Date to format
  * @returns Formatted date string
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return '-';
+  
   const d = typeof date === 'string' ? new Date(date) : date;
+  
+  // Check if date is valid
+  if (isNaN(d.getTime())) return '-';
+  
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
@@ -120,8 +126,14 @@ export function formatDate(date: Date | string): string {
  * @param date - Date to format
  * @returns Formatted date string
  */
-export function formatDateForAPI(date: Date | string): string {
+export function formatDateForAPI(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
   const d = typeof date === 'string' ? new Date(date) : date;
+  
+  // Check if date is valid
+  if (isNaN(d.getTime())) return '';
+  
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
@@ -133,8 +145,14 @@ export function formatDateForAPI(date: Date | string): string {
  * @param date - Date to format
  * @returns Formatted date-time string
  */
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return '-';
+  
   const d = typeof date === 'string' ? new Date(date) : date;
+  
+  // Check if date is valid
+  if (isNaN(d.getTime())) return '-';
+  
   return new Intl.DateTimeFormat('en-GB', {
     year: 'numeric',
     month: '2-digit',
@@ -149,8 +167,14 @@ export function formatDateTime(date: Date | string): string {
  * @param date - Date to format
  * @returns Relative time string
  */
-export function formatRelativeTime(date: Date | string): string {
+export function formatRelativeTime(date: Date | string | null | undefined): string {
+  if (!date) return '-';
+  
   const d = typeof date === 'string' ? new Date(date) : date;
+  
+  // Check if date is valid
+  if (isNaN(d.getTime())) return '-';
+  
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
 

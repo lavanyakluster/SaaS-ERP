@@ -75,8 +75,7 @@ const COUNTRY_OPTIONS = [
 
 function TenantSetupContent() {
   const router = useRouter();
-  const { theme, isDark } = useTheme();
-  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
+  const { theme } = useTheme();
   
   // Form state
   const [mounted, setMounted] = useState(false);
@@ -107,8 +106,24 @@ function TenantSetupContent() {
         const currentRefreshToken = useAuthStore.getState().tokens?.refreshToken;
         
         if (currentRefreshToken) {
-          // Refresh-token API removed. Continue without manual refresh.
-          console.log('⚠️ Refresh-token API removed; skipping manual refresh.');
+          try {
+            // Refresh tokens to get new token with organizationId
+            const { refreshToken } = await import('@/lib/api/auth.api');
+            const refreshResponse = await refreshToken({ refreshToken: currentRefreshToken });
+            
+            console.log('🔄 Token refreshed successfully!');
+            console.log('🎫 New token preview:', refreshResponse.accessToken.substring(0, 50) + '...');
+            
+            // Update tokens in store
+            useAuthStore.getState().setTokens(
+              refreshResponse.accessToken,
+              refreshResponse.refreshToken,
+              refreshResponse.expiresIn
+            );
+          } catch (refreshError) {
+            console.error('❌ Token refresh failed:', refreshError);
+            // Continue anyway - user can still access the app
+          }
         }
       } else {
         console.log('✅ New tokens received from backend');
@@ -282,6 +297,8 @@ function TenantSetupContent() {
     return null;
   }
 
+  const isDark = theme === 'dark';
+
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${
       isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
@@ -295,7 +312,7 @@ function TenantSetupContent() {
             showText={true}
             title="SmartBook ERP"
             subtitle="Let's set up your workspace"
-            theme={themeMode}
+            theme={theme}
           />
         </div>
 
@@ -626,3 +643,4 @@ function TenantSetupContent() {
 export default function TenantSetupPage() {
   return <TenantSetupContent />;
 }
+

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/lib/store/theme-store';
 import { useGradientStore } from '@/lib/store/gradient-store';
+import { useAuthStore } from '@/lib/store/auth-store';
 import {
   MasterLayout,
   MasterPageHeader,
@@ -17,9 +18,9 @@ import type { CreateAccountMasterRequest } from '@/lib/api/account-master.api';
 import { toast } from 'sonner';
 
 export default function AccountMasterPage() {
-  const { theme, isDark } = useTheme();
-  const themeMode = theme === 'system' ? (isDark ? 'dark' : 'light') : theme;
+  const { theme } = useTheme();
   const { activeGradient } = useGradientStore();
+  const selectedYear = useAuthStore((state) => state.selectedYear);
 
   const [searchText, setSearchText] = useState('');
   const [selectedAccountCode, setSelectedAccountCode] = useState('');
@@ -164,7 +165,7 @@ export default function AccountMasterPage() {
     }
 
     // Build API request with correct field names
-    const accountData: Omit<CreateAccountMasterRequest, 'year'> = {
+    const accountData: CreateAccountMasterRequest = {
       acCode: formData.accountCode,
       acNm: formData.name,
       acPl: formData.place,
@@ -189,6 +190,7 @@ export default function AccountMasterPage() {
       acUntyp: 'h',                  // Hardcoded
       adCstno: 'h',                  // Hardcoded
       acMaingc: 'j',                 // Hardcoded
+      year: selectedYear || new Date().getFullYear().toString(),
     };
 
     console.log('=== CALLING API ===');
@@ -317,7 +319,7 @@ export default function AccountMasterPage() {
         subtitle="Manage customer, supplier, and account information"
         icon={Users}
         gradient={activeGradient}
-        theme={themeMode}
+        theme={theme}
         onSave={handleSave}
         onDelete={handleDelete}
         onClear={handleClear}
@@ -329,7 +331,7 @@ export default function AccountMasterPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <MasterFormCard theme={themeMode}>
+          <MasterFormCard theme={theme}>
             <div className="p-8">
               {/* Two Column Grid */}
               <div className="grid grid-cols-2 gap-x-8 gap-y-6">
@@ -347,7 +349,7 @@ export default function AccountMasterPage() {
                     }))}
                     placeholder="Account Code"
                     label="Account Code"
-                    theme={themeMode}
+                    theme={theme}
                     isLoading={isSearching}
                   />
 
@@ -357,7 +359,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('name', value)}
                     placeholder="Name"
                     label="Name"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Place */}
@@ -366,7 +368,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('place', value)}
                     placeholder="Place"
                     label="Place"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Select Type */}
@@ -376,7 +378,7 @@ export default function AccountMasterPage() {
                     options={accountTypeOptions}
                     placeholder="Select Type"
                     label="Select Type"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Address */}
@@ -385,7 +387,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('address', value)}
                     placeholder="Address"
                     label="Address"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Address Line 1 */}
@@ -394,7 +396,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('addressLine1', value)}
                     placeholder="Address Line 1"
                     label="Address Line 1"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Address Line 2 */}
@@ -403,7 +405,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('addressLine2', value)}
                     placeholder="Address Line 2"
                     label="Address Line 2"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Bank */}
@@ -412,7 +414,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('bank', value)}
                     placeholder="Bank"
                     label="Bank"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Branch & Phone - Side by side */}
@@ -422,7 +424,7 @@ export default function AccountMasterPage() {
                       onChange={(value) => handleInputChange('branch', value)}
                       placeholder="Branch"
                       label="Branch"
-                      theme={themeMode}
+                      theme={theme}
                     />
 
                     <MasterFormInput
@@ -431,7 +433,7 @@ export default function AccountMasterPage() {
                       placeholder="Phone"
                       label="Phone"
                       type="tel"
-                      theme={themeMode}
+                      theme={theme}
                     />
                   </div>
                 </div>
@@ -444,7 +446,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('groupCode', value)}
                     placeholder="Group Code"
                     label="Group Code"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Group Name - Auto-populated from API */}
@@ -454,7 +456,7 @@ export default function AccountMasterPage() {
                       onChange={(value) => handleInputChange('groupName', value)}
                       placeholder={isLoadingGroup ? "Loading..." : "Group Name"}
                       label="Group Name"
-                      theme={themeMode}
+                      theme={theme}
                       disabled={isLoadingGroup}
                     />
                     {isLoadingGroup && (
@@ -472,7 +474,7 @@ export default function AccountMasterPage() {
                       placeholder="Seq No"
                       label="Seq No"
                       type="number"
-                      theme={themeMode}
+                      theme={theme}
                     />
 
                     <MasterFormInput
@@ -480,7 +482,7 @@ export default function AccountMasterPage() {
                       onChange={(value) => handleInputChange('rep', value)}
                       placeholder="Rep"
                       label="Rep"
-                      theme={themeMode}
+                      theme={theme}
                     />
                   </div>
 
@@ -491,7 +493,7 @@ export default function AccountMasterPage() {
                     options={stateOptions}
                     placeholder="State"
                     label="State"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Reg No */}
@@ -500,7 +502,7 @@ export default function AccountMasterPage() {
                     onChange={(value) => handleInputChange('regNo', value)}
                     placeholder="Reg No"
                     label="Reg No"
-                    theme={themeMode}
+                    theme={theme}
                   />
 
                   {/* Dealer Type & Inter State - Side by side */}
@@ -511,7 +513,7 @@ export default function AccountMasterPage() {
                       options={dealerTypeOptions}
                       placeholder="Dealer Type"
                       label="Dealer Type"
-                      theme={themeMode}
+                      theme={theme}
                     />
 
                     <MasterFormSelect
@@ -520,7 +522,7 @@ export default function AccountMasterPage() {
                       options={interStateOptions}
                       placeholder="Inter State"
                       label="Inter State"
-                      theme={themeMode}
+                      theme={theme}
                     />
                   </div>
 
@@ -532,7 +534,7 @@ export default function AccountMasterPage() {
                       placeholder="Disco..."
                       label="Discount %"
                       type="number"
-                      theme={themeMode}
+                      theme={theme}
                     />
 
                     <MasterFormInput
@@ -541,7 +543,7 @@ export default function AccountMasterPage() {
                       placeholder="Credit Days"
                       label="Credit Days"
                       type="number"
-                      theme={themeMode}
+                      theme={theme}
                     />
 
                     <MasterFormInput
@@ -550,7 +552,7 @@ export default function AccountMasterPage() {
                       placeholder="Credit..."
                       label="Credit Limit"
                       type="number"
-                      theme={themeMode}
+                      theme={theme}
                     />
                   </div>
 
@@ -561,7 +563,7 @@ export default function AccountMasterPage() {
                     placeholder="Email"
                     label="Email"
                     type="email"
-                    theme={themeMode}
+                    theme={theme}
                   />
                 </div>
               </div>

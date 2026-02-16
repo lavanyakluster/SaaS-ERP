@@ -1,80 +1,92 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
+import type { ColumnDef } from '@tanstack/react-table';
+import { EnhancedDataTable } from '@/components/ui/enhanced-data-table';
 import { useTheme } from '@/lib/store/theme-store';
-import { CommonReportFilters, type ReportFilters } from '@/components/reports/CommonReportFilters';
 import { useSalesSummary, useDashSalesSummary } from '@/lib/hooks/useSalesSummary';
-import { useSalesDashboard } from '@/lib/hooks'; // ✅ Import the correct hook
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useSalesDashboard } from '@/lib/hooks';
 
-export default function DailySalesSummary() {
+interface DailySalesSummaryProps {
+  filters: {
+    branchCode: string;
+    fromDate: string;
+    toDate: string;
+  };
+}
+
+// Helper function to get current quarter dates
+const getQuarterDates = (): { fromDate: string; toDate: string } => {
+  const today = new Date();
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  const quarter = Math.floor(today.getMonth() / 3);
+  const quarterStart = new Date(today.getFullYear(), quarter * 3, 1);
+  return { 
+    fromDate: formatDate(quarterStart), 
+    toDate: formatDate(today) 
+  };
+};
+
+export default function DailySalesSummary({ filters }: DailySalesSummaryProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-
-  // State for filters
-  const [filters, setFilters] = useState<ReportFilters>({
-    branchCode: '0',
-    fromDate: new Date().toISOString().split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
-  });
 
   // State for active tab
   const [activeTab, setActiveTab] = useState<'summary' | 'salesman'>('summary');
 
-  // Fetch data from both APIs
-  const { data: salesSummaryData, isLoading: isSalesSummaryLoading } = useSalesSummary({
-    dtf: filters.fromDate,
-    dtt: filters.toDate,
-    brcode: filters.branchCode,
-    shift: '0',
-  });
+  // Use default values if no filters are provided from parent
+  const defaultDates = getQuarterDates();
+  const effectiveFilters = {
+    branchCode: filters.branchCode || '000', // '000' = All Branches
+    fromDate: filters.fromDate || defaultDates.fromDate,
+    toDate: filters.toDate || defaultDates.toDate,
+  };
 
-  const { data: dashSalesData, isLoading: isDashSalesLoading } = useDashSalesSummary({
-    dtf: filters.fromDate,
-    dtt: filters.toDate,
-    brcode: filters.branchCode,
-  });
+  // Always fetch data with effective filters (defaults or provided)
+  const hasFilters = true; // Always enabled
 
-  // ✅ Use correct hook with correct parameter names (fromDt, toDt, brCode)
-  const { data: salesDashboardData, isLoading: isSalesDashboardLoading } = useSalesDashboard({
-    fromDt: filters.fromDate,
-    toDt: filters.toDate,
-    brCode: filters.branchCode,
-  });
+  // Fetch data from both APIs using effective filters
+  const { data: salesSummaryData, isLoading: isSalesSummaryLoading } = useSalesSummary(
+    {
+      dtf: effectiveFilters.fromDate,
+      dtt: effectiveFilters.toDate,
+      brcode: effectiveFilters.branchCode,
+      shift: '0',
+    },
+    hasFilters
+  );
+
+  const { data: dashSalesData, isLoading: isDashSalesLoading } = useDashSalesSummary(
+    {
+      dtf: effectiveFilters.fromDate,
+      dtt: effectiveFilters.toDate,
+      brcode: effectiveFilters.branchCode,
+    },
+    hasFilters
+  );
+
+  // Only fetch salesdashboard API when Salesman tab is active
+  const { data: salesDashboardData, isLoading: isSalesDashboardLoading } = useSalesDashboard(
+    {
+      fromDt: effectiveFilters.fromDate,
+      toDt: effectiveFilters.toDate,
+      brCode: effectiveFilters.branchCode,
+    },
+    hasFilters && activeTab === 'salesman' // Only fetch when Salesman tab is active
+  );
 
   const isLoading = isSalesSummaryLoading || isDashSalesLoading || isSalesDashboardLoading;
 
-  // Debug: Log the actual data structure
-  console.log('📊 Raw API Data:', {
-    dashSalesData,
-    salesDashboardData,
-    filters,
-    isLoading,
-  });
-
-  const handleLoadReport = (newFilters: ReportFilters) => {
-    console.log('🔄 Loading Daily Sales Summary with filters:', newFilters);
-    console.log('📊 Dynamic Values:', {
-      branchCode: newFilters.branchCode,
-      fromDate: newFilters.fromDate,
-      toDate: newFilters.toDate,
-      activeTab,
-    });
-    setFilters(newFilters);
-  };
-
-  // Process data for bar chart - Using actual API response structure
+  // Process data for bar chart
   const chartData = useMemo(() => {
-    console.log('🔍 Processing Chart Data...');
-    
     if (!dashSalesData || !Array.isArray(dashSalesData) || dashSalesData.length === 0) {
-      console.log('❌ No data available for chart');
       return [];
     }
 
-    // ✅ Map each branch to show all sales types
-    const result = dashSalesData.map((item) => ({
+    return dashSalesData.map((item) => ({
       branchCode: item.branchCode || 'Unknown',
       'Cash Sales': item.cashWet || item.cashNet || 0,
       'Card Sales': item.cardWet || item.cardNet || 0,
@@ -84,57 +96,37 @@ export default function DailySalesSummary() {
                      (item.cardWet || item.cardNet || 0) + 
                      (item.creditWet || item.creditNet || 0),
     }));
-
-    console.log('✅ Chart Data Processed:', result);
-    return result;
   }, [dashSalesData]);
 
-  // Process data for table - Using actual API response structure
+  // Process data for table
   const tableData = useMemo(() => {
-    console.log('🔍 Processing Table Data...');
-    
-    // ✅ Salesman tab: Use salesDashboard API data (Table1 - Sales Rep Data)
     if (activeTab === 'salesman') {
       if (!salesDashboardData?.Table1 || salesDashboardData.Table1.length === 0) {
-        console.log('❌ No salesman data available');
         return [];
       }
 
-      const rows = salesDashboardData.Table1.map((item) => ({
+      return salesDashboardData.Table1.map((item) => ({
         code: item.Code,
         salesman: item.SalesMan,
         sale: item.Sale,
         profit: item.Profit,
       }));
-
-      console.log('✅ Salesman Table Data Processed:', rows);
-      return rows;
     }
     
-    // ✅ Summary tab: Use dashSalesData
     if (!dashSalesData || !Array.isArray(dashSalesData) || dashSalesData.length === 0) {
-      console.log('❌ No data available for table');
       return [];
     }
 
-    const rows = dashSalesData.map((item, index) => {
-      const row = {
-        code: item.branchCode || `Branch ${index + 1}`,
-        description: item.branchName || item.branchCode || `Branch ${index + 1}`,
-        cashSales: item.cashWet || item.cashNet || 0,
-        cardSales: item.cardWet || item.cardNet || 0,
-        creditSales: item.creditWet || item.creditNet || 0,
-        insurance: item.insuranceWet || item.insuranceNet || 0,
-        pointsRedeemed: item.redeemedPoints || 0,
-        totalBills: item.totalBills || 0,
-      };
-      
-      console.log('📝 Created row:', row);
-      return row;
-    });
-
-    console.log('✅ Table Data Processed:', rows);
-    return rows;
+    return dashSalesData.map((item, index) => ({
+      code: item.branchCode || `Branch ${index + 1}`,
+      description: item.branchName || item.branchCode || `Branch ${index + 1}`,
+      cashSales: item.cashWet || item.cashNet || 0,
+      cardSales: item.cardWet || item.cardNet || 0,
+      creditSales: item.creditWet || item.creditNet || 0,
+      insurance: item.insuranceWet || item.insuranceNet || 0,
+      pointsRedeemed: item.redeemedPoints || 0,
+      totalBills: item.totalBills || 0,
+    }));
   }, [dashSalesData, salesDashboardData, activeTab]);
 
   // Process data for salesman chart
@@ -143,14 +135,11 @@ export default function DailySalesSummary() {
       return [];
     }
 
-    const data = salesDashboardData.Table1.map((item) => ({
+    return salesDashboardData.Table1.map((item) => ({
       salesman: item.SalesMan,
       sales: item.Sale,
       profit: item.Profit,
     }));
-
-    console.log('📊 Salesman Chart Data:', data);
-    return data;
   }, [salesDashboardData, activeTab]);
 
   // Calculate totals
@@ -170,16 +159,13 @@ export default function DailySalesSummary() {
     }
 
     if (activeTab === 'salesman') {
-      const result = tableData.reduce((acc, row: any) => ({
+      return tableData.reduce((acc, row: any) => ({
         sale: acc.sale + row.sale,
         profit: acc.profit + row.profit,
       }), { sale: 0, profit: 0 });
-      
-      console.log('💰 Salesman Totals Calculated:', result);
-      return result;
     }
 
-    const result = tableData.reduce((acc, row: any) => ({
+    return tableData.reduce((acc, row: any) => ({
       cashSales: acc.cashSales + row.cashSales,
       cardSales: acc.cardSales + row.cardSales,
       creditSales: acc.creditSales + row.creditSales,
@@ -194,62 +180,320 @@ export default function DailySalesSummary() {
       pointsRedeemed: 0, 
       totalBills: 0 
     });
-
-    console.log('💰 Totals Calculated:', result);
-    return result;
   }, [tableData, activeTab]);
 
-  const cashTotals = activeTab === 'salesman'
-    ? null
-    : (totals as {
-        cashSales: number;
-        cardSales: number;
-        creditSales: number;
-        insurance: number;
-        pointsRedeemed: number;
-        totalBills: number;
-      });
+  // TanStack Table column definitions
+  const summaryColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'code',
+      header: 'Branch Code',
+      cell: ({ getValue }) => (
+        <div className="font-semibold">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'description',
+      header: 'Branch Name',
+      cell: ({ getValue }) => (
+        <div className="min-w-[200px]">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'cashSales',
+      header: 'Cash Sales',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'cardSales',
+      header: 'Card Sales',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'creditSales',
+      header: 'Credit Sales',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'insurance',
+      header: 'Insurance',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'pointsRedeemed',
+      header: 'Points Redeemed',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'totalBills',
+      header: 'Total Bills',
+      cell: ({ getValue }) => (
+        <div className="text-right font-semibold">{getValue() as number}</div>
+      ),
+    },
+  ];
 
-  const salesmanTotals = activeTab === 'salesman'
-    ? (totals as { sale: number; profit: number })
-    : null;
+  const salesmanColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'code',
+      header: 'Code',
+      cell: ({ getValue }) => (
+        <div className="font-semibold">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'salesman',
+      header: 'Salesman',
+      cell: ({ getValue }) => (
+        <div className="min-w-[200px]">{getValue() as string}</div>
+      ),
+    },
+    {
+      accessorKey: 'sale',
+      header: 'Sale',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'profit',
+      header: 'Profit',
+      cell: ({ getValue }) => (
+        <div className="text-right">
+          {((getValue() as number) ?? 0).toFixed(2)}
+        </div>
+      ),
+    },
+  ];
+
+  // ECharts theme-aware colors
+  const chartColors = {
+    textColor: isDark ? '#9ca3af' : '#6b7280',
+    gridColor: isDark ? '#374151' : '#e5e7eb',
+    tooltipBg: isDark ? '#1f2937' : '#ffffff',
+    tooltipBorder: isDark ? '#374151' : '#e5e7eb',
+  };
+
+  // ECharts option for Summary chart
+  const summaryChartOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: chartColors.tooltipBg,
+      borderColor: chartColors.tooltipBorder,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+      valueFormatter: (value: any) => {
+        return typeof value === 'number' ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value;
+      },
+    },
+    legend: {
+      bottom: 0,
+      textStyle: {
+        color: chartColors.textColor,
+        fontSize: 11,
+      },
+      padding: 15,
+    },
+    grid: {
+      left: '0%',
+      right: '2%',
+      bottom: '15%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.map(item => item.branchCode),
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 12,
+      },
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 12,
+        formatter: (value: number) => {
+          return value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value.toString();
+        },
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+    },
+    series: [
+      {
+        name: 'Cash Sales',
+        type: 'bar',
+        data: chartData.map(item => item['Cash Sales']),
+        itemStyle: { 
+          color: '#C026D3',
+          borderRadius: [4, 4, 0, 0],
+        },
+        barWidth: '16%', // Increased from default
+        barMaxWidth: 80, // Increased from 50
+      },
+      {
+        name: 'Card Sales',
+        type: 'bar',
+        data: chartData.map(item => item['Card Sales']),
+        itemStyle: { 
+          color: '#EC4899',
+          borderRadius: [4, 4, 0, 0],
+        },
+        barWidth: '16%', // Increased from default
+        barMaxWidth: 80, // Increased from 50
+      },
+      {
+        name: 'Credit Sales',
+        type: 'bar',
+        data: chartData.map(item => item['Credit Sales']),
+        itemStyle: { 
+          color: '#22D3EE',
+          borderRadius: [4, 4, 0, 0],
+        },
+        barWidth: '16%', // Increased from default
+        barMaxWidth: 80, // Increased from 50
+      },
+      {
+        name: 'Returned Sales',
+        type: 'bar',
+        data: chartData.map(item => item['Returned Sales']),
+        itemStyle: { 
+          color: '#FBBF24',
+          borderRadius: [4, 4, 0, 0],
+        },
+        barWidth: '16%', // Increased from default
+        barMaxWidth: 80, // Increased from 50
+      },
+      {
+        name: 'Total Sales',
+        type: 'bar',
+        data: chartData.map(item => item['Total Sales']),
+        itemStyle: { 
+          color: '#10B981',
+          borderRadius: [4, 4, 0, 0],
+        },
+        barWidth: '16%', // Increased from default
+        barMaxWidth: 80, // Increased from 50
+      },
+    ],
+  };
+
+  // ECharts option for Salesman chart
+  const salesmanChartOption: EChartsOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: chartColors.tooltipBg,
+      borderColor: chartColors.tooltipBorder,
+      borderWidth: 1,
+      textStyle: {
+        color: chartColors.textColor,
+      },
+      valueFormatter: (value: any) => {
+        return typeof value === 'number' ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value;
+      },
+    },
+    legend: {
+      bottom: 0,
+      textStyle: {
+        color: chartColors.textColor,
+        fontSize: 11,
+      },
+      padding: 15,
+    },
+    grid: {
+      left: '0%',
+      right: '2%',
+      bottom: '15%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: salesmanChartData.map(item => item.salesman),
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 10,
+        rotate: salesmanChartData.length > 5 ? 45 : 0,
+      },
+      axisLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: chartColors.textColor,
+        fontSize: 12,
+        formatter: (value: number) => {
+          return value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value.toString();
+        },
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartColors.gridColor,
+        },
+      },
+    },
+    series: [
+      {
+        name: 'Sales',
+        type: 'bar',
+        data: salesmanChartData.map(item => item.sales),
+        itemStyle: { 
+          color: '#6366F1',
+          borderRadius: [4, 4, 0, 0],
+        },
+        barWidth: '40%', // Increased from default
+        barMaxWidth: 80, // Increased from 50
+      },
+    ],
+  };
+
+  // Calculate dynamic chart width based on data count
+  const summaryChartWidth = Math.max(1000, chartData.length * 120); // 120px per branch
+  const salesmanChartWidth = Math.max(1000, salesmanChartData.length * 100); // 100px per salesman
 
   return (
     <div className="space-y-6 h-full overflow-y-auto pr-2">
-      {/* Common Filters - Always at Top */}
-      <CommonReportFilters onLoad={handleLoadReport} />
-
-      {/* Active Filters Display - Shows dynamic values being used */}
-      {filters.branchCode !== '0' || filters.fromDate !== filters.toDate ? (
-        <div className={`rounded-lg border p-3 ${
-          isDark ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200'
-        }`}>
-          <div className="flex items-center gap-4 flex-wrap text-sm">
-            <span className={`font-medium ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-              Active Filters:
-            </span>
-            <div className="flex items-center gap-2">
-              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Branch:</span>
-              <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {filters.branchCode === '0' ? 'All Branches' : filters.branchCode}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Period:</span>
-              <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {filters.fromDate} {filters.fromDate !== filters.toDate ? `to ${filters.toDate}` : ''}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Tab:</span>
-              <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {activeTab === 'summary' ? 'Summary View' : 'Salesman View (Year-over-Year)'}
-              </span>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {/* Tabs */}
       <div className={`rounded-lg border overflow-hidden ${
         isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
@@ -293,259 +537,143 @@ export default function DailySalesSummary() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Bar Chart */}
+          {/* ECharts Bar Chart */}
           <div className={`rounded-lg border overflow-hidden ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className={`font-semibold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`p-4 border-b ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'}`}>
+              <div className="flex items-center justify-between">
+                <h3 className={`font-sans text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Sales Summary
                 </h3>
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-gray-400" />
-                  <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <span className={`font-sans text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     Bar Graph
                   </span>
                 </div>
               </div>
-              
+            </div>
+            
+            <div className="p-4">
               {activeTab === 'salesman' ? (
-                // ✅ Salesman Chart - Shows sales by salesman
                 salesmanChartData.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                    <p className={`font-sans ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       No salesman data available for the selected filters
                     </p>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={salesmanChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#E5E7EB'} />
-                      <XAxis 
-                        dataKey="salesman" 
-                        stroke={isDark ? '#9CA3AF' : '#6B7280'}
-                        style={{ fontSize: '10px' }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={100}
-                      />
-                      <YAxis 
-                        stroke={isDark ? '#9CA3AF' : '#6B7280'}
-                        style={{ fontSize: '12px' }}
-                        tickFormatter={(value) => {
-                          if (value >= 1000) {
-                            return `${(value / 1000).toFixed(0)}K`;
-                          }
-                          return value.toString();
-                        }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                          border: `1px solid ${isDark ? '#374151' : '#E5E7EB'}`,
-                          borderRadius: '8px',
-                          color: isDark ? '#F3F4F6' : '#111827',
-                        }}
-                        formatter={(value?: number) => {
-                          if (value === undefined || value === null) return '';
-                          return value.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          });
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="sales" fill="#6366F1" name="Sales" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="overflow-x-auto">
+                    <ReactECharts
+                      option={salesmanChartOption}
+                      style={{ height: '350px', width: `${salesmanChartWidth}px` }}
+                      theme={isDark ? 'dark' : undefined}
+                    />
+                  </div>
                 )
               ) : (
-                // ✅ Summary Chart - Shows sales by type
                 chartData.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                    <p className={`font-sans ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       No data available for the selected filters
                     </p>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#E5E7EB'} />
-                      <XAxis 
-                        dataKey="branchCode" 
-                        stroke={isDark ? '#9CA3AF' : '#6B7280'}
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis 
-                        stroke={isDark ? '#9CA3AF' : '#6B7280'}
-                        style={{ fontSize: '12px' }}
-                        tickFormatter={(value) => {
-                          if (value >= 1000) {
-                            return `${(value / 1000).toFixed(0)}K`;
-                          }
-                          return value.toString();
-                        }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                          border: `1px solid ${isDark ? '#374151' : '#E5E7EB'}`,
-                          borderRadius: '8px',
-                          color: isDark ? '#F3F4F6' : '#111827',
-                        }}
-                        formatter={(value?: number) => {
-                          if (value === undefined || value === null) return '';
-                          return value.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          });
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="Cash Sales" fill="#C026D3" name="Cash Sales" />
-                      <Bar dataKey="Card Sales" fill="#EC4899" name="Card Sales" />
-                      <Bar dataKey="Credit Sales" fill="#22D3EE" name="Credit Sales" />
-                      <Bar dataKey="Returned Sales" fill="#FBBF24" name="Returned Sales" />
-                      <Bar dataKey="Total Sales" fill="#10B981" name="Total Sales" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="overflow-x-auto">
+                    <ReactECharts
+                      option={summaryChartOption}
+                      style={{ height: '350px', width: `${summaryChartWidth}px` }}
+                      theme={isDark ? 'dark' : undefined}
+                    />
+                  </div>
                 )
               )}
             </div>
           </div>
 
-          {/* Table */}
+          {/* TanStack Table */}
           <div className={`rounded-lg border overflow-hidden ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <div className="overflow-x-auto">
-              {activeTab === 'summary' ? (
-                <table className="w-full text-sm">
-                  <thead className="bg-indigo-600 text-white">
-                    <tr>
-                      <th className="text-left p-3 font-semibold whitespace-nowrap">Branch Code</th>
-                      <th className="text-left p-3 font-semibold whitespace-nowrap">Branch Name</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Cash Sales</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Card Sales</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Credit Sales</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Insurance</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Points Redeemed</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Total Bills</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableData.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="p-6 text-center">
-                          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                            No data available for the selected filters
-                          </p>
-                        </td>
-                      </tr>
+            <div className={`p-4 border-b ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'}`}>
+              <h3 className={`font-sans text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {activeTab === 'summary' ? 'Branch Sales Summary' : 'Salesman Performance'}
+              </h3>
+              <p className={`font-sans text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tableData.length} {activeTab === 'summary' ? 'branches' : 'salesmen'}
+              </p>
+            </div>
+            <div className="p-4">
+              <EnhancedDataTable
+                columns={activeTab === 'summary' ? summaryColumns : salesmanColumns}
+                data={tableData}
+                isDark={isDark}
+                height="500px"
+                enablePagination={true}
+                enableSorting={true}
+                pageSize={10}
+              />
+              
+              {/* Totals Row */}
+              {tableData.length > 0 && (
+                <div className={`mt-4 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <div className="grid grid-cols-8 gap-4 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    {activeTab === 'summary' ? (
+                      <>
+                        <div className="col-span-2">
+                          <span className="font-bold text-blue-900 dark:text-blue-300">Total</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).cashSales.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).cardSales.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).creditSales.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).insurance.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).pointsRedeemed.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-blue-900 dark:text-blue-300">
+                            {(totals as any).totalBills}
+                          </span>
+                        </div>
+                      </>
                     ) : (
-                      tableData.map((row: any, index) => (
-                        <tr 
-                          key={index} 
-                          className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-100'} ${
-                            index % 2 === 0 
-                              ? isDark ? 'bg-gray-800' : 'bg-white'
-                              : isDark ? 'bg-gray-750' : 'bg-gray-50'
-                          }`}
-                        >
-                          <td className={`p-3 ${isDark ? 'text-white' : 'text-gray-900'} font-medium whitespace-nowrap`}>
-                            {row.code}
-                          </td>
-                          <td className={`p-3 ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.description}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.cashSales.toFixed(2)}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.cardSales.toFixed(2)}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.creditSales.toFixed(2)}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.insurance.toFixed(2)}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.pointsRedeemed.toFixed(2)}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-white' : 'text-gray-900'} font-semibold whitespace-nowrap`}>
-                            {row.totalBills}
-                          </td>
-                        </tr>
-                      ))
+                      <>
+                        <div className="col-span-2">
+                          <span className="font-bold text-blue-900 dark:text-blue-300">Total</span>
+                        </div>
+                        <div className="col-span-3 text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).sale.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="col-span-3 text-right">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {(totals as any).profit.toFixed(2)}
+                          </span>
+                        </div>
+                      </>
                     )}
-                  </tbody>
-                  <tfoot className="bg-indigo-600 text-white font-semibold">
-                    <tr>
-                      <td colSpan={2} className="p-3 whitespace-nowrap">Total</td>
-                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.cashSales.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.cardSales.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.creditSales.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.insurance.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.pointsRedeemed.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{cashTotals?.totalBills}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-indigo-600 text-white">
-                    <tr>
-                      <th className="text-left p-3 font-semibold whitespace-nowrap">Code</th>
-                      <th className="text-left p-3 font-semibold whitespace-nowrap">Salesman</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Sale</th>
-                      <th className="text-right p-3 font-semibold whitespace-nowrap">Profit</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableData.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="p-6 text-center">
-                          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                            No salesman data available for the selected filters
-                          </p>
-                        </td>
-                      </tr>
-                    ) : (
-                      tableData.map((row: any, index) => (
-                        <tr 
-                          key={index} 
-                          className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-100'} ${
-                            index % 2 === 0 
-                              ? isDark ? 'bg-gray-800' : 'bg-white'
-                              : isDark ? 'bg-gray-750' : 'bg-gray-50'
-                          }`}
-                        >
-                          <td className={`p-3 ${isDark ? 'text-white' : 'text-gray-900'} font-medium whitespace-nowrap`}>
-                            {row.code}
-                          </td>
-                          <td className={`p-3 ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.salesman}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.sale.toFixed(2)}
-                          </td>
-                          <td className={`p-3 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>
-                            {row.profit.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  <tfoot className="bg-indigo-600 text-white font-semibold">
-                    <tr>
-                      <td colSpan={2} className="p-3 whitespace-nowrap">Total</td>
-                      <td className="p-3 text-right whitespace-nowrap">{salesmanTotals?.sale.toFixed(2)}</td>
-                      <td className="p-3 text-right whitespace-nowrap">{salesmanTotals?.profit.toFixed(2)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -554,3 +682,4 @@ export default function DailySalesSummary() {
     </div>
   );
 }
+

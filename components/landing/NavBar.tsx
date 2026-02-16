@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 interface NavBarProps {
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | 'system';
   onToggleTheme?: () => void;
 }
 

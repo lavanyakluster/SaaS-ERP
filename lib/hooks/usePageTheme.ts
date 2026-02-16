@@ -15,8 +15,10 @@ import { useTheme } from '@/lib/store/theme-store';
 import { useGradientStore } from '@/lib/store/gradient-store';
 
 export function usePageTheme() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { activeGradient } = useGradientStore();
+
+  const isDark = useMemo(() => theme === 'dark', [theme]);
 
   return useMemo(
     () => ({

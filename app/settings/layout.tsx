@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useTheme } from '@/lib/store/theme-store';
 import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
@@ -143,11 +145,24 @@ const DEFAULT_SECTION_METADATA = {
 // ============================================
 
 function SettingsLayoutContent({ children }: SettingsLayoutProps) {
+  const router = useRouter();
   const { selectedOrganization } = useAuthStore();
-  const { isDark } = useTheme();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { activeCategory, activeSection, setActiveCategory, setActiveSection } = useSettings();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const sectionMeta = SECTION_METADATA[activeSection] || DEFAULT_SECTION_METADATA;
+
+  const handleClose = () => {
+    router.push('/dashboard');
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    // You can add search filtering logic here
+    console.log('Search query:', query);
+  };
 
   return (
     <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -159,6 +174,7 @@ function SettingsLayoutContent({ children }: SettingsLayoutProps) {
         onSectionChange={setActiveSection}
         isDark={isDark}
         organizationName={selectedOrganization?.displayName || selectedOrganization?.name}
+        onClose={handleClose}
       />
 
       {/* Main Content Area */}
@@ -168,10 +184,9 @@ function SettingsLayoutContent({ children }: SettingsLayoutProps) {
           title={sectionMeta.title}
           description={sectionMeta.description}
           isDark={isDark}
-          showBackButton={true}
-          backUrl="/dashboard"
-          showCloseButton={true}
-          closeUrl="/dashboard"
+          showSearch={true}
+          searchPlaceholder="Search settings..."
+          onSearchChange={handleSearchChange}
         />
 
         {/* Content */}

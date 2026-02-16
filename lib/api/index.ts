@@ -18,3 +18,6 @@ export * from './profit-loss.api';
 export * from './sales-dashboard.api';
 export * from './accounts.api';
 export * from './sales-summary.api';
+export * from './quotes-status.api';
+export * from './sales-target.api';
+export * from './loyalty.api';

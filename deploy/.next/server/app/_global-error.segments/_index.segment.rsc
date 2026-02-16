@@ -1,0 +1,4 @@
+1:"$Sreact.fragment"
+2:I[57121,[],""]
+3:I[74581,[],""]
+0:{"buildId":"_woNjNcvUByYgkT5tTCRQ","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":[["$","div","l",{"className":"min-h-screen bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 flex items-center justify-center","children":["$","div",null,{"className":"text-center","children":[["$","div",null,{"className":"w-20 h-20 mx-auto mb-6 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center animate-pulse","children":["$","span",null,{"className":"text-white font-black text-3xl","children":"S"}]}],["$","div",null,{"className":"text-white text-xl font-semibold mb-4","children":"Loading SmartBook..."}],["$","div",null,{"className":"w-12 h-12 mx-auto border-4 border-white/20 border-t-white rounded-full animate-spin"}]]}]}],[],[]],"isPartial":false}

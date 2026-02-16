@@ -1,0 +1,18 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(auth)/layout,_N_T_/(auth)/auth/layout,_N_T_/(auth)/auth/callback/layout,_N_T_/(auth)/auth/callback/google/layout,_N_T_/(auth)/auth/callback/google/page,_N_T_/auth/callback/google"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KGF1dGgp/auth/callback/google/__PAGE__",
+    "/!KGF1dGgp/auth/callback/google",
+    "/!KGF1dGgp/auth/callback",
+    "/!KGF1dGgp/auth",
+    "/!KGF1dGgp",
+    "/_index",
+    "/_head"
+  ]
+}

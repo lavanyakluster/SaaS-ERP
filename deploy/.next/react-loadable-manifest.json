@@ -1,0 +1,135 @@
+{
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/DashboardCustomizer": {
+    "id": 85143,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/5143.bc4288847503b59d.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/EnhancedSalesDashboard": {
+    "id": 50939,
+    "files": [
+      "static/chunks/recharts-465de9f186251c10.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/939.b2318288656ffd2e.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/MetricsGrid": {
+    "id": 19113,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/9113.20e1b57e1436df27.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/ModernAccountDashboard": {
+    "id": 63190,
+    "files": [
+      "static/chunks/recharts-465de9f186251c10.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/3190.a7f59bb2c66415a4.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/ModernItemDashboard": {
+    "id": 86920,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/6920.c48b64d9d8093afb.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/ModernSalesDashboard": {
+    "id": 93817,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/recharts-465de9f186251c10.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/3817.b29aaa463708e994.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/ModernSalesKPIDashboard": {
+    "id": 43397,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/3397.196ddfb517b13170.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/WidgetFullscreenModal": {
+    "id": 43576,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/recharts-465de9f186251c10.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/2851.b69a4250f667fdf4.js",
+      "static/chunks/3576.325dabe923855b27.js"
+    ]
+  },
+  "app\\(main)\\dashboard\\page.tsx -> @/components/dashboard/WidgetsGrid": {
+    "id": 27701,
+    "files": [
+      "static/chunks/lucide-828ab3e2b0f8e90d.js",
+      "static/chunks/recharts-465de9f186251c10.js",
+      "static/chunks/vendors-112bf97e922c27b9.js",
+      "static/chunks/2851.b69a4250f667fdf4.js",
+      "static/chunks/7701.969a55e6d6f8cae4.js"
+    ]
+  },
+  "app\\page.tsx -> @/components/landing/BenefitsSection": {
+    "id": 91474,
+    "files": [
+      "static/chunks/1474.424d59b13be230d4.js"
+    ]
+  },
+  "app\\page.tsx -> @/components/landing/CTASection": {
+    "id": 97942,
+    "files": [
+      "static/chunks/7942.1c7df1813776b6ab.js"
+    ]
+  },
+  "app\\page.tsx -> @/components/landing/FeaturesSection": {
+    "id": 41713,
+    "files": [
+      "static/chunks/1713.4e76448ae5bb27f4.js"
+    ]
+  },
+  "app\\page.tsx -> @/components/landing/Footer": {
+    "id": 3724,
+    "files": [
+      "static/chunks/3724.cd0f0ec76055ea3d.js"
+    ]
+  },
+  "app\\page.tsx -> @/components/landing/HowItWorksSection": {
+    "id": 62857,
+    "files": [
+      "static/chunks/2857.d48a9bdc494afbb1.js"
+    ]
+  },
+  "app\\page.tsx -> @/components/landing/PricingSection": {
+    "id": 8314,
+    "files": [
+      "static/chunks/8314.c8174c5a24094029.js"
+    ]
+  },
+  "lib\\auth\\microsoft-auth.service.ts -> @azure/msal-browser": {
+    "id": 13005,
+    "files": [
+      "static/chunks/vendors-112bf97e922c27b9.js"
+    ]
+  },
+  "node_modules\\@azure\\msal-browser\\dist\\telemetry\\BrowserPerformanceClient.mjs -> ./BrowserPerformanceMeasurement.mjs": {
+    "id": null,
+    "files": []
+  },
+  "node_modules\\next\\dist\\client\\index.js -> ../pages/_app": {
+    "id": 41966,
+    "files": [
+      "static/chunks/vendors-112bf97e922c27b9.js"
+    ]
+  },
+  "node_modules\\next\\dist\\client\\index.js -> ../pages/_error": {
+    "id": 3899,
+    "files": [
+      "static/chunks/vendors-112bf97e922c27b9.js"
+    ]
+  }
+}

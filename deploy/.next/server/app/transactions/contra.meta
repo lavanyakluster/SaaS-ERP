@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(main)/layout,_N_T_/(main)/transactions/layout,_N_T_/(main)/transactions/contra/layout,_N_T_/(main)/transactions/contra/page,_N_T_/transactions/contra"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KG1haW4p/transactions/contra/__PAGE__",
+    "/!KG1haW4p/transactions/contra",
+    "/!KG1haW4p/transactions",
+    "/!KG1haW4p",
+    "/_index",
+    "/_head"
+  ]
+}

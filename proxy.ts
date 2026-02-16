@@ -26,6 +26,7 @@ const publicRoutes = [
   '/tenant-setup',
   '/forgot-password',
   '/reset-password',
+  '/create-password',
 ];
 
 /**
@@ -38,6 +39,7 @@ const authRoutes = [
   '/verify-email',
   '/forgot-password',
   '/reset-password',
+  '/create-password',
 ];
 
 /**

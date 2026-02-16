@@ -98,7 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (hasRedirected.current) return;
 
     // Route definitions
-    const authRoutes = ['/login', '/signup', '/verify-email', '/forgot-password', '/reset-password'];
+    const authRoutes = [
+      '/login',
+      '/signup',
+      '/verify-email',
+      '/forgot-password',
+      '/reset-password',
+      '/create-password',
+    ];
     const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
     const isRootRoute = pathname === '/';
     const isTenantSetup = pathname.startsWith('/tenant-setup');

@@ -1,0 +1,236 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/auth/callback/google",
+      "regex": "^/auth/callback/google(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/callback/google(?:/)?$"
+    },
+    {
+      "page": "/billing",
+      "regex": "^/billing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/billing(?:/)?$"
+    },
+    {
+      "page": "/create-password",
+      "regex": "^/create\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/create\\-password(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/forgot-password",
+      "regex": "^/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/masters/accounts",
+      "regex": "^/masters/accounts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/masters/accounts(?:/)?$"
+    },
+    {
+      "page": "/masters/branches",
+      "regex": "^/masters/branches(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/masters/branches(?:/)?$"
+    },
+    {
+      "page": "/masters/currencies",
+      "regex": "^/masters/currencies(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/masters/currencies(?:/)?$"
+    },
+    {
+      "page": "/masters/groups",
+      "regex": "^/masters/groups(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/masters/groups(?:/)?$"
+    },
+    {
+      "page": "/masters/profit-centers",
+      "regex": "^/masters/profit\\-centers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/masters/profit\\-centers(?:/)?$"
+    },
+    {
+      "page": "/reports/balance-sheet",
+      "regex": "^/reports/balance\\-sheet(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/balance\\-sheet(?:/)?$"
+    },
+    {
+      "page": "/reports/ledger",
+      "regex": "^/reports/ledger(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/ledger(?:/)?$"
+    },
+    {
+      "page": "/reports/profit-loss",
+      "regex": "^/reports/profit\\-loss(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/profit\\-loss(?:/)?$"
+    },
+    {
+      "page": "/reports/purchase-report",
+      "regex": "^/reports/purchase\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/purchase\\-report(?:/)?$"
+    },
+    {
+      "page": "/reports/purchases",
+      "regex": "^/reports/purchases(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/purchases(?:/)?$"
+    },
+    {
+      "page": "/reports/sales",
+      "regex": "^/reports/sales(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/sales(?:/)?$"
+    },
+    {
+      "page": "/reports/sales-report",
+      "regex": "^/reports/sales\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/sales\\-report(?:/)?$"
+    },
+    {
+      "page": "/reports/trial-balance",
+      "regex": "^/reports/trial\\-balance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/trial\\-balance(?:/)?$"
+    },
+    {
+      "page": "/reports/vat",
+      "regex": "^/reports/vat(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/vat(?:/)?$"
+    },
+    {
+      "page": "/reset-password",
+      "regex": "^/reset\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reset\\-password(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    },
+    {
+      "page": "/signup",
+      "regex": "^/signup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/signup(?:/)?$"
+    },
+    {
+      "page": "/tenant-setup",
+      "regex": "^/tenant\\-setup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tenant\\-setup(?:/)?$"
+    },
+    {
+      "page": "/transactions/contra",
+      "regex": "^/transactions/contra(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/transactions/contra(?:/)?$"
+    },
+    {
+      "page": "/transactions/journal",
+      "regex": "^/transactions/journal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/transactions/journal(?:/)?$"
+    },
+    {
+      "page": "/transactions/payments",
+      "regex": "^/transactions/payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/transactions/payments(?:/)?$"
+    },
+    {
+      "page": "/transactions/receipts",
+      "regex": "^/transactions/receipts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/transactions/receipts(?:/)?$"
+    },
+    {
+      "page": "/verify-email",
+      "regex": "^/verify\\-email(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/verify\\-email(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

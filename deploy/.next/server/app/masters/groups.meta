@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(main)/layout,_N_T_/(main)/masters/layout,_N_T_/(main)/masters/groups/layout,_N_T_/(main)/masters/groups/page,_N_T_/masters/groups"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KG1haW4p/masters/groups/__PAGE__",
+    "/!KG1haW4p/masters/groups",
+    "/!KG1haW4p/masters",
+    "/!KG1haW4p",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(main)/layout,_N_T_/(main)/transactions/layout,_N_T_/(main)/transactions/payments/layout,_N_T_/(main)/transactions/payments/page,_N_T_/transactions/payments"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KG1haW4p/transactions/payments/__PAGE__",
+    "/!KG1haW4p/transactions/payments",
+    "/!KG1haW4p/transactions",
+    "/!KG1haW4p",
+    "/_index",
+    "/_head"
+  ]
+}

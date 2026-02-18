@@ -35,41 +35,27 @@ export interface UserDetails {
   branches?: string[]; // Branches assigned to user (if API returns this)
 }
 
-export interface PermissionObject {
-  allow: string[];
-  deny?: string[];
-  backDays?: number;
-  timeRestrictionEnabled?: boolean;
-  timeFrom?: string;
-  timeTo?: string;
-  offDay?: string;
-}
-
 export interface CreateUserRequest {
   name: string;
   email: string;
   roleid: string;
-  Permissions: string[];
+  permissions: {
+    allow: string[];
+    deny: string[];
+  };
   Branches: string[];
   status: boolean;
-  backDays?: number;
-  timeRestrictionEnabled?: boolean;
-  timeFrom?: string;
-  timeTo?: string;
-  offDay?: string;
 }
 
 export interface UpdateUserRequest {
   name: string;
   email: string;
   roleid: string;
-  Permissions: string[];
+  permissions: {
+    allow: string[];
+    deny: string[];
+  };
   Branches: string[];
-  backDays?: number;
-  timeRestrictionEnabled?: boolean;
-  timeFrom?: string;
-  timeTo?: string;
-  offDay?: string;
   // Note: status is NOT included in update requests per API spec
 }
 
@@ -116,13 +102,18 @@ export const getUsers = async (): Promise<User[]> => {
   return response.data;
 };
 
+export interface GetUserDetailResponse {
+  status: number;
+  data: UserDetails;
+}
+
 /**
  * Get user by ID
  * @param userId - The user ID to fetch
  */
 export const getUserById = async (userId: string): Promise<UserDetails> => {
-  const response = await apiClient.get<UserDetails>(`/user/${userId}`);
-  return response.data;
+  const response = await apiClient.get<GetUserDetailResponse>(`/user/${userId}`);
+  return response.data.data;
 };
 
 /**

@@ -5,16 +5,6 @@
 
 import { apiClient } from './client';
 
-export interface PermissionObject {
-  allow: string[];
-  deny?: string[];
-  backDays?: number;
-  timeRestrictionEnabled?: boolean;
-  timeFrom?: string;
-  timeTo?: string;
-  offDay?: string;
-}
-
 export interface CreateRoleRequest {
   Role: string;
   Description: string;
@@ -64,12 +54,17 @@ export const getRoles = async (): Promise<GetRolesResponse> => {
   return response.data;
 };
 
+export interface GetRoleResponse {
+  status: number;
+  data: Role;
+}
+
 /**
  * Get role by ID
  */
 export const getRoleById = async (roleId: string): Promise<Role> => {
-  const response = await apiClient.get<Role>(`/roles/${roleId}`);
-  return response.data;
+  const response = await apiClient.get<GetRoleResponse>(`/roles/${roleId}`);
+  return response.data.data;
 };
 
 /**

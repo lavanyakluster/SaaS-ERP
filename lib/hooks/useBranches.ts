@@ -43,12 +43,12 @@ export const useBranches = () => {
   }
 
   return useQuery<Branch[], Error>({
-    queryKey: ['branches', selectedYear],
+    queryKey: ['branches', selectedYear], // Include year in key to refetch if it changes
     queryFn: () => getAllBranches(selectedYear || undefined),
     staleTime: 30 * 60 * 1000, // ⚡ 30 minutes - branches rarely change
     gcTime: 60 * 60 * 1000, // ⚡ 60 minutes cache time
     retry: false, // ❌ DISABLED: No automatic retries on failure
-    enabled: isAuthenticated && !!selectedYear, // ✅ Only fetch if authenticated AND year is selected
+    enabled: isAuthenticated, // ✅ Fetch if authenticated, even without year (API handles undefined year)
     refetchOnMount: false, // ⚡ Don't refetch on mount if cached
     refetchOnWindowFocus: false, // ⚡ Don't refetch on window focus
     refetchOnReconnect: false, // ⚡ Don't refetch on reconnect
@@ -69,9 +69,9 @@ export const useBranches = () => {
  */
 export const useBranchByCode = (branchCode: string | null | undefined) => {
   const { data: branches } = useBranches();
-  
+
   if (!branchCode || !branches) return undefined;
-  
+
   return branches.find((branch) => branch.bR_COD === branchCode);
 };
 
@@ -89,9 +89,9 @@ export const useBranchByCode = (branchCode: string | null | undefined) => {
  */
 export const useBranchesByBusinessUnit = (businessUnit: number | null | undefined) => {
   const { data: branches, ...rest } = useBranches();
-  
+
   const filteredBranches = branches?.filter((branch) => branch.bR_BUNIT === businessUnit) || [];
-  
+
   return {
     data: filteredBranches,
     ...rest,

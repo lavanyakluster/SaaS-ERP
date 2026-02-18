@@ -8,10 +8,7 @@ import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useRoles, useRoleById } from '@/lib/hooks/useRoles';
 import { useUserById, useCreateUser, useUpdateUser } from '@/lib/hooks/useUsers';
 import { useBranches } from '@/lib/hooks';
-import {
-  parseAdditionalPermissionsFromApi,
-  transformAdditionalPermissionsToApi,
-} from '@/lib/utils/permissions';
+import { parseAdditionalPermissionsFromApi, parseModulePermissionsFromApi, combineAllPermissions } from '@/lib/utils/permissions';
 import { changeEmail } from '@/lib/api/users.api';
 import { toast } from 'sonner';
 
@@ -37,19 +34,22 @@ interface UserFormData {
 export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalProps) {
   // Fetch all roles for dropdown
   const { data: rolesData, isLoading: rolesLoading } = useRoles();
-  
+
+  // ✅ Fetch all branches
+  const { data: branchesData, isLoading: branchesLoading } = useBranches();
+
   // Fetch user details if in edit mode
   const { data: userData, isLoading: userLoading } = useUserById(userId ?? null);
-  
+
   // Create user mutation
   const createUserMutation = useCreateUser();
-  
+
   // Update user mutation
   const updateUserMutation = useUpdateUser();
-  
+
   // Initialize with first role if available
   const initialRole = rolesData?.data?.[0]?.id || '';
-  
+
   const [formData, setFormData] = useState<UserFormData>({
     name: '',
     email: '',
@@ -61,10 +61,10 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
     timeTo: '18:00',
     offDay: 'none',
   });
-  
+
   // Fetch selected role's permissions
   const roleByIdQuery = useRoleById(formData.role || null);
-  
+
   // Initialize permissions hook
   const { permissions, handlers } = usePermissions();
 
@@ -90,7 +90,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         timeTo: '18:00',
         offDay: 'none',
       });
-      
+
       // Reset permissions and branches
       handlers.setModulePermissions({});
       handlers.setBranches([]);
@@ -101,14 +101,13 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
   useEffect(() => {
     if (userData && userId && isOpen) {
       console.log('📝 Loading user data for edit:', userData);
-      console.log('📝 Full user data object:', JSON.stringify(userData, null, 2));
-      
+      // console.log('📝 Full user data object:', JSON.stringify(userData, null, 2));
+
       setFormData({
-        name: userData.name,
-        email: userData.email,
-        role: userData.roleId,
+        name: userData.name ?? '',
+        email: userData.email ?? '',
+        role: userData.roleId ?? '',
         backDays: 0, // TODO: Get from userData if available
-        // parse any special permissions from the allow list
         additionalPermissions: parseAdditionalPermissionsFromApi(userData.permissions?.allow || []),
         timeRestrictionEnabled: false,
         timeFrom: '09:00',
@@ -116,30 +115,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         offDay: 'none',
       });
 
-      // Parse permissions and set module permissions
-      const allowPermissions = userData.permissions?.allow || [];
-      
-      // Convert API permissions back to module permissions format
-      const modulePerms: Record<string, { add: boolean; view: boolean; edit: boolean; delete: boolean }> = {};
-      
-      allowPermissions.forEach(perm => {
-        const parts = perm.split('_');
-        if (parts.length === 2) {
-          const module = parts[0].toLowerCase();
-          const action = parts[1].toLowerCase();
-          
-          if (!modulePerms[module]) {
-            modulePerms[module] = { add: false, view: false, edit: false, delete: false };
-          }
-          
-          if (action === 'view') modulePerms[module].view = true;
-          else if (action === 'create') modulePerms[module].add = true;
-          else if (action === 'update') modulePerms[module].edit = true;
-          else if (action === 'delete') modulePerms[module].delete = true;
-        }
-      });
-
-      // Update permissions state
+      // Parse and set module permissions using common utility
+      const modulePerms = parseModulePermissionsFromApi(userData.permissions?.allow || []);
       handlers.setModulePermissions(modulePerms);
 
       // Load branches if available (handle both 'branches' and 'Branches')
@@ -148,7 +125,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       console.log('🌿 Type of branches:', typeof userBranches, Array.isArray(userBranches));
       console.log('🌿 Branches length:', userBranches.length);
       console.log('🌿 First branch (if exists):', userBranches[0]);
-      
+
       if (userBranches && Array.isArray(userBranches) && userBranches.length > 0) {
         console.log('✅ Setting branches:', userBranches);
         handlers.setBranches(userBranches);
@@ -157,7 +134,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         console.log('⚠️ No branches found, resetting to empty array');
         handlers.setBranches([]);
       }
-      
+
       // Log final state after setting
       setTimeout(() => {
         console.log('🔍 Final selected branches state:', permissions.selectedBranches);
@@ -165,21 +142,37 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
     }
   }, [userData, userId, isOpen]);
 
-  // Load role permissions when role changes
+  // Load role permissions when role changes or modal opens
   useEffect(() => {
-    if (roleByIdQuery.data && !userId) {
-      // Only parse if we have valid permissions array and not in edit mode
-      const permissions = roleByIdQuery.data.permissions || [];
-      
+    if (!isOpen || userId) return;
+
+    // Strategy 1: Load from rolesData list (if permissions are included - instant)
+    const selectedRoleInList = rolesData?.data?.find(r => r.id === formData.role);
+    if (selectedRoleInList?.permissions) {
+      console.log('⚡ Loading permissions from roles list:', formData.role);
+      const permissions = selectedRoleInList.permissions;
       setFormData(prev => ({
         ...prev,
         additionalPermissions: parseAdditionalPermissionsFromApi(permissions),
       }));
+      handlers.setModulePermissions(parseModulePermissionsFromApi(permissions));
+      return;
     }
-  }, [roleByIdQuery.data, userId]);
+
+    // Strategy 2: Load from singular role query (fallback/manual changes)
+    if (roleByIdQuery.data) {
+      console.log('🔍 Loading permissions from role query:', formData.role);
+      const permissions = roleByIdQuery.data.permissions || [];
+      setFormData(prev => ({
+        ...prev,
+        additionalPermissions: parseAdditionalPermissionsFromApi(permissions),
+      }));
+      handlers.setModulePermissions(parseModulePermissionsFromApi(permissions));
+    }
+  }, [roleByIdQuery.data, rolesData?.data, formData.role, userId, isOpen]);
 
   if (!isOpen) return null;
-  
+
   const isEditMode = !!userId;
   const isLoadingUser = userLoading && isEditMode;
   const isSubmitting = createUserMutation.isPending;
@@ -200,40 +193,29 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       toast.error('Please enter a name');
       return;
     }
-    
+
     if (!formData.email || typeof formData.email !== 'string' || !formData.email.trim()) {
       toast.error('Please enter an email');
       return;
     }
-    
+
     if (!formData.role) {
       toast.error('Please select a role');
       return;
     }
 
-    // Collect all permissions from the module permissions
-    const allowPermissions: string[] = [];
+    // Collect all permissions using the common utility
+    const allowPermissions = combineAllPermissions(
+      permissions.modulePermissions,
+      formData.additionalPermissions
+    );
     const denyPermissions: string[] = [];
-
-    // Add module permissions
-    Object.entries(permissions.modulePermissions).forEach(([module, perms]) => {
-      if (perms.view) allowPermissions.push(`${module.toUpperCase()}_VIEW`);
-      if (perms.add) allowPermissions.push(`${module.toUpperCase()}_CREATE`);
-      if (perms.edit) allowPermissions.push(`${module.toUpperCase()}_UPDATE`);
-      if (perms.delete) allowPermissions.push(`${module.toUpperCase()}_DELETE`);
-    });
-
-    // Include any special additional permissions from the form
-    const extra = transformAdditionalPermissionsToApi(formData.additionalPermissions);
-    if (extra.length > 0) {
-      allowPermissions.push(...extra);
-    }
 
     // Create or update the user via API
     try {
       let result;
       let createdOrUpdatedUserId: string;
-      
+
       if (isEditMode) {
         // Update user (without status field)
         result = await updateUserMutation.mutateAsync({
@@ -242,20 +224,16 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
             name: formData.name,
             email: formData.email,
             roleid: formData.role,
-            Permissions: allowPermissions,
+            permissions: {
+              allow: allowPermissions,
+              deny: denyPermissions,
+            },
             Branches: permissions.selectedBranches,
-            ...(formData.backDays > 0 && { backDays: formData.backDays }),
-            ...(formData.timeRestrictionEnabled && {
-              timeRestrictionEnabled: true,
-              timeFrom: formData.timeFrom,
-              timeTo: formData.timeTo,
-              offDay: formData.offDay,
-            }),
           }
         });
-        
+
         createdOrUpdatedUserId = userId;
-        
+
         // Check if email was changed in edit mode
         if (userData && formData.email !== userData.email) {
           console.log('📧 Email changed in edit mode, calling ChangeEmail API...');
@@ -275,23 +253,19 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
           name: formData.name,
           email: formData.email,
           roleid: formData.role,
-          Permissions: allowPermissions,
+          permissions: {
+            allow: allowPermissions,
+            deny: denyPermissions,
+          },
           Branches: permissions.selectedBranches,
           status: true,
-          ...(formData.backDays > 0 && { backDays: formData.backDays }),
-          ...(formData.timeRestrictionEnabled && {
-            timeRestrictionEnabled: true,
-            timeFrom: formData.timeFrom,
-            timeTo: formData.timeTo,
-            offDay: formData.offDay,
-          }),
         });
-        
+
         console.log('📝 Create user response:', result);
-        
+
         // Extract userId from response (try multiple possible locations)
         const newUserId = result.userId || result.data?.userId || result.data?.organizationUserId;
-        
+
         if (newUserId) {
           console.log('📧 Triggering ChangeEmail API for newly created user:', newUserId);
           try {
@@ -318,7 +292,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       onClose();
     } catch (error: any) {
       console.error('Failed to create/update user:', error);
-      
+
       // Handle specific error messages
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
@@ -330,38 +304,33 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
     }
   };
 
-  const inputClassName = `w-full px-4 py-2.5 rounded-lg border ${
-    isDark
-      ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
+  const inputClassName = `w-full px-4 py-2.5 rounded-lg border ${isDark
+    ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
+    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
 
-  const selectClassName = `w-full px-4 py-2.5 rounded-lg border ${
-    isDark
-      ? 'bg-gray-700/50 border-gray-600 text-white'
-      : 'bg-white border-gray-300 text-gray-900'
-  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
+  const selectClassName = `w-full px-4 py-2.5 rounded-lg border ${isDark
+    ? 'bg-gray-700/50 border-gray-600 text-white'
+    : 'bg-white border-gray-300 text-gray-900'
+    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
       <div
-        className={`w-full max-w-[1700px] rounded-xl sm:rounded-2xl shadow-2xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden ${
-          isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-        }`}
+        className={`w-full max-w-[1700px] rounded-xl sm:rounded-2xl shadow-2xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
+          }`}
       >
         {/* Header */}
-        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border-b ${
-          isDark 
-            ? 'border-gray-700 bg-gradient-to-r from-blue-900/30 via-indigo-900/30 to-purple-900/30' 
-            : 'border-gray-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50'
-        }`}>
+        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border-b ${isDark
+          ? 'border-gray-700 bg-gradient-to-r from-blue-900/30 via-indigo-900/30 to-purple-900/30'
+          : 'border-gray-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50'
+          }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl flex items-center justify-center ${
-                isDark 
-                  ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-2 ring-blue-500/30' 
-                  : 'bg-gradient-to-br from-blue-100 to-purple-100 ring-2 ring-blue-200'
-              }`}>
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl flex items-center justify-center ${isDark
+                ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-2 ring-blue-500/30'
+                : 'bg-gradient-to-br from-blue-100 to-purple-100 ring-2 ring-blue-200'
+                }`}>
                 <User className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
               </div>
               <div>
@@ -375,11 +344,10 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
             </div>
             <button
               onClick={onClose}
-              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl transition-all hover:rotate-90 ${
-                isDark 
-                  ? 'hover:bg-gray-800 text-gray-400 hover:text-white' 
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-              }`}
+              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl transition-all hover:rotate-90 ${isDark
+                ? 'hover:bg-gray-800 text-gray-400 hover:text-white'
+                : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+                }`}
             >
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
@@ -392,22 +360,19 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
             {/* Left Column - User Details (3 columns on desktop, full width on mobile) */}
             <div className="lg:col-span-3 space-y-4 sm:space-y-5">
               {/* Basic Information */}
-              <div className={`rounded-xl border ${
-                isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
-              }`}>
+              <div className={`rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+                }`}>
                 <div className={`px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <h3 className={`text-sm font-semibold flex items-center gap-2 ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
+                  <h3 className={`text-sm font-semibold flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-800'
+                    }`}>
                     <User className="w-4 h-4 text-blue-500" />
                     Basic Information
                   </h3>
                 </div>
                 <div className="p-4 space-y-4">
                   <div>
-                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Full Name
                     </label>
                     <input
@@ -420,15 +385,13 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
+                      <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`} />
                       <input
                         type="email"
                         value={formData.email}
@@ -440,15 +403,13 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       User Role
                     </label>
                     <div className="relative">
-                      <Shield className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
+                      <Shield className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`} />
                       <select
                         value={formData.role}
                         onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
@@ -473,22 +434,19 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
               </div>
 
               {/* Additional Settings */}
-              <div className={`rounded-xl border ${
-                isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
-              }`}>
+              <div className={`rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+                }`}>
                 <div className={`px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <h3 className={`text-sm font-semibold flex items-center gap-2 ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
+                  <h3 className={`text-sm font-semibold flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-800'
+                    }`}>
                     <Clock className="w-4 h-4 text-purple-500" />
                     Additional Settings
                   </h3>
                 </div>
                 <div className="p-4 space-y-4">
                   <div>
-                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Back Days Limit
                     </label>
                     <input
@@ -509,9 +467,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                         onChange={(e) => setFormData(prev => ({ ...prev, timeRestrictionEnabled: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className={`text-sm font-medium ${
-                        isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
-                      }`}>
+                      <span className={`text-sm font-medium ${isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
+                        }`}>
                         Enable Time Restrictions
                       </span>
                     </label>
@@ -520,9 +477,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                       <div className={`space-y-3 pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className={`block text-xs font-medium mb-1.5 ${
-                              isDark ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
                               From
                             </label>
                             <input
@@ -533,9 +489,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                             />
                           </div>
                           <div>
-                            <label className={`block text-xs font-medium mb-1.5 ${
-                              isDark ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
                               To
                             </label>
                             <input
@@ -548,9 +503,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                         </div>
 
                         <div>
-                          <label className={`block text-xs font-medium mb-1.5 ${
-                            isDark ? 'text-gray-400' : 'text-gray-600'
-                          }`}>
+                          <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
                             Off Day
                           </label>
                           <select
@@ -570,9 +524,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                   </div>
 
                   <div className={`pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <label className={`block text-xs font-semibold mb-3 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-3 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Special Permissions
                     </label>
                     <div className="space-y-2.5">
@@ -584,9 +537,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                             onChange={() => handleAdditionalPermissionToggle(perm.id)}
                             className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                           />
-                          <span className={`text-sm ${
-                            isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
-                          }`}>
+                          <span className={`text-sm ${isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
+                            }`}>
                             {perm.label}
                           </span>
                         </label>
@@ -612,9 +564,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         </div>
 
         {/* Footer */}
-        <div className={`px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${
-          isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
-        }`}>
+        <div className={`px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
+          }`}>
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm">
             <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               <span className="font-semibold text-blue-500">{permissions.selectedBranches.length}</span> branches
@@ -629,11 +580,10 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={onClose}
-              className={`flex-1 sm:flex-initial px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium transition-all text-sm sm:text-base ${
-                isDark 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-              }`}
+              className={`flex-1 sm:flex-initial px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium transition-all text-sm sm:text-base ${isDark
+                ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                }`}
             >
               Cancel
             </button>

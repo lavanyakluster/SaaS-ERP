@@ -42,7 +42,10 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
 
   // Fetch role details if editing
   const roleByIdQuery = useRoleById(editRoleId || null);
-  
+
+  // ✅ Fetch all branches
+  const { data: branchesData, isLoading: branchesLoading } = useBranches();
+
   // Debug logs
   useEffect(() => {
     console.log('🎯 CreateRoleModal - editRoleId:', editRoleId);
@@ -52,16 +55,16 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
       data: roleByIdQuery.data,
     });
   }, [editRoleId, roleByIdQuery.isLoading, roleByIdQuery.data]);
-  
+
   // Initialize permissions with parsed data if editing
-  const initialModulePermissions = roleByIdQuery.data 
+  const initialModulePermissions = roleByIdQuery.data
     ? parseModulePermissionsFromApi(roleByIdQuery.data.permissions)
     : {};
 
   const { permissions, handlers } = usePermissions({
     modulePermissions: initialModulePermissions,
   });
-  
+
   const createRoleMutation = useCreateRole();
   const updateRoleMutation = useUpdateRole();
 
@@ -69,13 +72,13 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
   useEffect(() => {
     if (roleByIdQuery.data && editRoleId) {
       const role = roleByIdQuery.data;
-      
+
       // Parse permissions from API
       const parsedAdditionalPermissions = parseAdditionalPermissionsFromApi(role.permissions);
-      
+      const parsedModulePermissions = parseModulePermissionsFromApi(role.permissions);
+
       // Update form data
       setFormData({
-        // fall back to empty string if API returns undefined/null
         roleName: role.name ?? '',
         description: role.description ?? '',
         additionalPermissions: parsedAdditionalPermissions,
@@ -85,6 +88,9 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
         timeTo: '18:00',
         offDay: 'none',
       });
+
+      // Update permissions panel state
+      handlers.setModulePermissions(parsedModulePermissions);
     } else if (!editRoleId) {
       // Reset form when creating new
       setFormData({
@@ -97,8 +103,11 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
         timeTo: '18:00',
         offDay: 'none',
       });
+
+      // Reset permissions panel state
+      handlers.setModulePermissions({});
     }
-  }, [roleByIdQuery.data, editRoleId]);
+  }, [roleByIdQuery.data, editRoleId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -118,7 +127,7 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
       toast.error('Please enter a role name');
       return;
     }
-    
+
     try {
       // Combine all permissions
       const allPermissions = combineAllPermissions(
@@ -128,16 +137,9 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
 
       // Prepare API payload
       const payload = {
-        Role: formData.roleName.trim(),
-        Description: formData.description.trim(),
+        Role: (formData.roleName ?? '').trim(),
+        Description: (formData.description ?? '').trim(),
         Permissions: allPermissions,
-        ...(formData.backDays > 0 && { backDays: formData.backDays }),
-        ...(formData.timeRestrictionEnabled && {
-          timeRestrictionEnabled: true,
-          timeFrom: formData.timeFrom,
-          timeTo: formData.timeTo,
-          offDay: formData.offDay,
-        }),
       };
 
       console.log(editRoleId ? 'Updating role:' : 'Creating role:', payload);
@@ -148,7 +150,7 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
       } else {
         await createRoleMutation.mutateAsync(payload);
       }
-      
+
       // Close modal on success (toast handled by hook)
       onClose();
     } catch (error) {
@@ -157,38 +159,33 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
     }
   };
 
-  const inputClassName = `w-full px-4 py-2.5 rounded-lg border ${
-    isDark
-      ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
+  const inputClassName = `w-full px-4 py-2.5 rounded-lg border ${isDark
+    ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
+    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
 
-  const selectClassName = `w-full px-4 py-2.5 rounded-lg border ${
-    isDark
-      ? 'bg-gray-700/50 border-gray-600 text-white'
-      : 'bg-white border-gray-300 text-gray-900'
-  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
+  const selectClassName = `w-full px-4 py-2.5 rounded-lg border ${isDark
+    ? 'bg-gray-700/50 border-gray-600 text-white'
+    : 'bg-white border-gray-300 text-gray-900'
+    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`;
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
       <div
-        className={`w-full max-w-[1700px] rounded-xl sm:rounded-2xl shadow-2xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden ${
-          isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-        }`}
+        className={`w-full max-w-[1700px] rounded-xl sm:rounded-2xl shadow-2xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
+          }`}
       >
         {/* Header */}
-        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border-b ${
-          isDark 
-            ? 'border-gray-700 bg-gradient-to-r from-emerald-900/30 via-teal-900/30 to-cyan-900/30' 
-            : 'border-gray-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50'
-        }`}>
+        <div className={`px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border-b ${isDark
+          ? 'border-gray-700 bg-gradient-to-r from-emerald-900/30 via-teal-900/30 to-cyan-900/30'
+          : 'border-gray-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50'
+          }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl flex items-center justify-center ${
-                isDark 
-                  ? 'bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 ring-2 ring-emerald-500/30' 
-                  : 'bg-gradient-to-br from-emerald-100 to-cyan-100 ring-2 ring-emerald-200'
-              }`}>
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl flex items-center justify-center ${isDark
+                ? 'bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 ring-2 ring-emerald-500/30'
+                : 'bg-gradient-to-br from-emerald-100 to-cyan-100 ring-2 ring-emerald-200'
+                }`}>
                 <Shield className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
               </div>
               <div>
@@ -202,11 +199,10 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
             </div>
             <button
               onClick={onClose}
-              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl transition-all hover:rotate-90 ${
-                isDark 
-                  ? 'hover:bg-gray-800 text-gray-400 hover:text-white' 
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-              }`}
+              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl transition-all hover:rotate-90 ${isDark
+                ? 'hover:bg-gray-800 text-gray-400 hover:text-white'
+                : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+                }`}
             >
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
@@ -219,27 +215,24 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
             {/* Left Column - Role Details (3 columns on desktop, full width on mobile) */}
             <div className="lg:col-span-3 space-y-4 sm:space-y-5">
               {/* Basic Information */}
-              <div className={`rounded-lg sm:rounded-xl border ${
-                isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
-              }`}>
+              <div className={`rounded-lg sm:rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+                }`}>
                 <div className={`px-3 sm:px-4 py-2.5 sm:py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <h3 className={`text-xs sm:text-sm font-semibold flex items-center gap-2 ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
+                  <h3 className={`text-xs sm:text-sm font-semibold flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-800'
+                    }`}>
                     <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
                     Basic Information
                   </h3>
                 </div>
                 <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                   <div>
-                    <label className={`block text-xs font-semibold mb-1.5 sm:mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-1.5 sm:mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Role Name
                     </label>
                     <input
                       type="text"
-                      value={formData.roleName ?? ''}
+                      value={formData.roleName}
                       onChange={(e) => setFormData(prev => ({ ...prev, roleName: e.target.value }))}
                       className={inputClassName}
                       placeholder="e.g., Sales Manager"
@@ -247,13 +240,12 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-semibold mb-1.5 sm:mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-1.5 sm:mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Description
                     </label>
                     <textarea
-                      value={formData.description ?? ''}
+                      value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       className={`${inputClassName} min-h-[80px] sm:min-h-[100px] resize-none`}
                       placeholder="Describe the role responsibilities..."
@@ -263,22 +255,19 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
               </div>
 
               {/* Additional Settings */}
-              <div className={`rounded-lg sm:rounded-xl border ${
-                isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
-              }`}>
+              <div className={`rounded-lg sm:rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
+                }`}>
                 <div className={`px-3 sm:px-4 py-2.5 sm:py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <h3 className={`text-xs sm:text-sm font-semibold flex items-center gap-2 ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
+                  <h3 className={`text-xs sm:text-sm font-semibold flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-800'
+                    }`}>
                     <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-500" />
                     Additional Settings
                   </h3>
                 </div>
                 <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                   <div>
-                    <label className={`block text-xs font-semibold mb-1.5 sm:mb-2 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-1.5 sm:mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Back Days Limit
                     </label>
                     <input
@@ -299,9 +288,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                         onChange={(e) => setFormData(prev => ({ ...prev, timeRestrictionEnabled: e.target.checked }))}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className={`text-xs sm:text-sm font-medium ${
-                        isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
-                      }`}>
+                      <span className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
+                        }`}>
                         Enable Time Restrictions
                       </span>
                     </label>
@@ -310,9 +298,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                       <div className={`space-y-2 sm:space-y-3 pt-2 sm:pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                         <div className="grid grid-cols-2 gap-2 sm:gap-3">
                           <div>
-                            <label className={`block text-xs font-medium mb-1 sm:mb-1.5 ${
-                              isDark ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <label className={`block text-xs font-medium mb-1 sm:mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
                               From
                             </label>
                             <input
@@ -323,9 +310,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                             />
                           </div>
                           <div>
-                            <label className={`block text-xs font-medium mb-1 sm:mb-1.5 ${
-                              isDark ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <label className={`block text-xs font-medium mb-1 sm:mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
                               To
                             </label>
                             <input
@@ -338,9 +324,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                         </div>
 
                         <div>
-                          <label className={`block text-xs font-medium mb-1 sm:mb-1.5 ${
-                            isDark ? 'text-gray-400' : 'text-gray-600'
-                          }`}>
+                          <label className={`block text-xs font-medium mb-1 sm:mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
                             Off Day
                           </label>
                           <select
@@ -360,9 +345,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                   </div>
 
                   <div className={`pt-2 sm:pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <label className={`block text-xs font-semibold mb-2 sm:mb-3 uppercase tracking-wide ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <label className={`block text-xs font-semibold mb-2 sm:mb-3 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       Special Permissions
                     </label>
                     <div className="space-y-2 sm:space-y-2.5">
@@ -374,9 +358,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                             onChange={() => handleAdditionalPermissionToggle(perm.id)}
                             className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                           />
-                          <span className={`text-xs sm:text-sm ${
-                            isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
-                          }`}>
+                          <span className={`text-xs sm:text-sm ${isDark ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'
+                            }`}>
                             {perm.label}
                           </span>
                         </label>
@@ -402,9 +385,8 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
         </div>
 
         {/* Footer */}
-        <div className={`px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${
-          isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
-        }`}>
+        <div className={`px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
+          }`}>
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm">
             <div className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               <span className="font-semibold text-blue-500">{permissions.selectedBranches.length}</span> branches
@@ -420,11 +402,10 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
             <button
               onClick={onClose}
               disabled={createRoleMutation.isPending || updateRoleMutation.isPending}
-              className={`flex-1 sm:flex-initial px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium transition-all text-sm sm:text-base ${
-                isDark 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900 disabled:opacity-50'
-              }`}
+              className={`flex-1 sm:flex-initial px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium transition-all text-sm sm:text-base ${isDark
+                ? 'bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-900 disabled:opacity-50'
+                }`}
             >
               Cancel
             </button>

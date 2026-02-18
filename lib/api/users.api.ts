@@ -35,27 +35,41 @@ export interface UserDetails {
   branches?: string[]; // Branches assigned to user (if API returns this)
 }
 
+export interface PermissionObject {
+  allow: string[];
+  deny?: string[];
+  backDays?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
+}
+
 export interface CreateUserRequest {
   name: string;
   email: string;
   roleid: string;
-  permissions: {
-    allow: string[];
-    deny: string[];
-  };
+  Permissions: string[];
   Branches: string[];
   status: boolean;
+  backDays?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
 }
 
 export interface UpdateUserRequest {
   name: string;
   email: string;
   roleid: string;
-  permissions: {
-    allow: string[];
-    deny: string[];
-  };
+  Permissions: string[];
   Branches: string[];
+  backDays?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
   // Note: status is NOT included in update requests per API spec
 }
 

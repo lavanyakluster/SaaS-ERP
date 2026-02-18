@@ -435,15 +435,15 @@ export default function SalesRegister({ filters }: SalesRegisterProps) {
           }`}>
             {/* Top Row: Search & Actions */}
             <div className="flex flex-wrap items-center gap-3 mb-3">
-              {/* Global Search */}
+              {/* Global Filter */}
               <div className="flex-1 min-w-[250px]">
                 <div className="relative">
-                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                  <Filter className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
                     isDark ? 'text-gray-400' : 'text-gray-500'
                   }`} />
                   <input
                     type="text"
-                    placeholder="Search across all columns..."
+                    placeholder="Filter across all columns..."
                     value={globalSearch}
                     onChange={(e) => setGlobalSearch(e.target.value)}
                     className={`w-full pl-10 pr-4 py-2 rounded-lg border ${

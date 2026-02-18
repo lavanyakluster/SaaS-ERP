@@ -5,6 +5,16 @@
 
 import { apiClient } from './client';
 
+export interface PermissionObject {
+  allow: string[];
+  deny?: string[];
+  backDays?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
+}
+
 export interface CreateRoleRequest {
   Role: string;
   Description: string;

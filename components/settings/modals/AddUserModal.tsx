@@ -8,7 +8,10 @@ import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useRoles, useRoleById } from '@/lib/hooks/useRoles';
 import { useUserById, useCreateUser, useUpdateUser } from '@/lib/hooks/useUsers';
 import { useBranches } from '@/lib/hooks';
-import { parseAdditionalPermissionsFromApi } from '@/lib/utils/permissions';
+import {
+  parseAdditionalPermissionsFromApi,
+  transformAdditionalPermissionsToApi,
+} from '@/lib/utils/permissions';
 import { changeEmail } from '@/lib/api/users.api';
 import { toast } from 'sonner';
 
@@ -105,7 +108,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
         email: userData.email,
         role: userData.roleId,
         backDays: 0, // TODO: Get from userData if available
-        additionalPermissions: {}, // TODO: Parse from userData.permissions
+        // parse any special permissions from the allow list
+        additionalPermissions: parseAdditionalPermissionsFromApi(userData.permissions?.allow || []),
         timeRestrictionEnabled: false,
         timeFrom: '09:00',
         timeTo: '18:00',
@@ -219,6 +223,12 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       if (perms.delete) allowPermissions.push(`${module.toUpperCase()}_DELETE`);
     });
 
+    // Include any special additional permissions from the form
+    const extra = transformAdditionalPermissionsToApi(formData.additionalPermissions);
+    if (extra.length > 0) {
+      allowPermissions.push(...extra);
+    }
+
     // Create or update the user via API
     try {
       let result;
@@ -232,11 +242,15 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
             name: formData.name,
             email: formData.email,
             roleid: formData.role,
-            permissions: {
-              allow: allowPermissions,
-              deny: denyPermissions,
-            },
+            Permissions: allowPermissions,
             Branches: permissions.selectedBranches,
+            ...(formData.backDays > 0 && { backDays: formData.backDays }),
+            ...(formData.timeRestrictionEnabled && {
+              timeRestrictionEnabled: true,
+              timeFrom: formData.timeFrom,
+              timeTo: formData.timeTo,
+              offDay: formData.offDay,
+            }),
           }
         });
         
@@ -261,12 +275,16 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
           name: formData.name,
           email: formData.email,
           roleid: formData.role,
-          permissions: {
-            allow: allowPermissions,
-            deny: denyPermissions,
-          },
+          Permissions: allowPermissions,
           Branches: permissions.selectedBranches,
           status: true,
+          ...(formData.backDays > 0 && { backDays: formData.backDays }),
+          ...(formData.timeRestrictionEnabled && {
+            timeRestrictionEnabled: true,
+            timeFrom: formData.timeFrom,
+            timeTo: formData.timeTo,
+            offDay: formData.offDay,
+          }),
         });
         
         console.log('📝 Create user response:', result);

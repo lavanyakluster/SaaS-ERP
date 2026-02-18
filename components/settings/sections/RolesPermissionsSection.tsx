@@ -200,7 +200,15 @@ export function RolesPermissionsSection({ isDark }: RolesPermissionsSectionProps
                   <div className={`flex items-center gap-2 text-xs ${
                     isDark ? 'text-gray-500' : 'text-gray-600'
                   }`}>
-                    <span>Created {formatDistanceToNow(new Date(role.created_At), { addSuffix: true })}</span>
+                    <span>
+                      Created{' '}
+                      {(() => {
+                        const date = new Date(role.created_At);
+                        return !role.created_At || isNaN(date.getTime())
+                          ? 'unknown'
+                          : formatDistanceToNow(date, { addSuffix: true });
+                      })()}
+                    </span>
                   </div>
                 </div>
 

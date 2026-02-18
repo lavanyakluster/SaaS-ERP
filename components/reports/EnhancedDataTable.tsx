@@ -53,16 +53,21 @@ export function EnhancedDataTable<T>({
 }: EnhancedDataTableProps<T>) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const EMPTY_FILTER_VALUE = '__EMPTY__';
 
   // State
   const [currentPage, setCurrentPage] = useState(1);
   const [globalSearch, setGlobalSearch] = useState('');
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
+  const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc' | null;
   }>({ key: '', direction: null });
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
+
+  const toFilterValue = (value: unknown) =>
+    value === null || value === undefined || value === '' ? EMPTY_FILTER_VALUE : String(value);
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -81,14 +86,13 @@ export function EnhancedDataTable<T>({
 
     // Apply column filters
     if (enableColumnFilters) {
-      Object.entries(columnFilters).forEach(([key, value]) => {
-        if (value) {
+      Object.entries(columnFilters).forEach(([key, selectedValues]) => {
+        if (selectedValues.length > 0) {
           const column = columns.find((col) => col.key === key);
           if (column) {
             result = result.filter((row) => {
-              const cellValue = column.accessor(row);
-              const filterValue = value.toLowerCase();
-              return cellValue?.toString().toLowerCase().includes(filterValue);
+              const cellValue = toFilterValue(column.accessor(row));
+              return selectedValues.includes(cellValue);
             });
           }
         }
@@ -139,24 +143,69 @@ export function EnhancedDataTable<T>({
     }));
   };
 
-  const handleColumnFilter = (columnKey: string, value: string) => {
+  const getColumnUniqueValues = (columnKey: string): string[] => {
+    const column = columns.find((col) => col.key === columnKey);
+    if (!column) return [];
+
+    const values = Array.from(
+      new Set(data.map((row) => toFilterValue(column.accessor(row))))
+    );
+
+    return values.sort((a, b) => {
+      if (a === EMPTY_FILTER_VALUE) return 1;
+      if (b === EMPTY_FILTER_VALUE) return -1;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  };
+
+  const getFilteredUniqueValues = (columnKey: string): string[] => {
+    const searchTerm = (filterSearch[columnKey] || '').toLowerCase().trim();
+    if (!searchTerm) return getColumnUniqueValues(columnKey);
+
+    return getColumnUniqueValues(columnKey).filter((value) => {
+      const displayValue = value === EMPTY_FILTER_VALUE ? '(Empty)' : value;
+      return displayValue.toLowerCase().includes(searchTerm);
+    });
+  };
+
+  const toggleColumnFilterValue = (columnKey: string, value: string) => {
+    setColumnFilters((prev) => {
+      const current = prev[columnKey] || [];
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+
+      return {
+        ...prev,
+        [columnKey]: next,
+      };
+    });
+    setCurrentPage(1);
+  };
+
+  const toggleSelectAllColumnValues = (columnKey: string) => {
+    const allValues = getColumnUniqueValues(columnKey);
+    const selectedValues = columnFilters[columnKey] || [];
+    const shouldClear = selectedValues.length === allValues.length;
+
     setColumnFilters((prev) => ({
       ...prev,
-      [columnKey]: value,
+      [columnKey]: shouldClear ? [] : allValues,
     }));
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1);
   };
 
   const clearColumnFilter = (columnKey: string) => {
-    setColumnFilters((prev) => {
-      const newFilters = { ...prev };
-      delete newFilters[columnKey];
-      return newFilters;
-    });
+    setColumnFilters((prev) => ({
+      ...prev,
+      [columnKey]: [],
+    }));
+    setCurrentPage(1);
   };
 
   const clearAllFilters = () => {
     setColumnFilters({});
+    setFilterSearch({});
     setGlobalSearch('');
     setCurrentPage(1);
   };
@@ -180,24 +229,25 @@ export function EnhancedDataTable<T>({
     }
   };
 
-  const activeFiltersCount = Object.values(columnFilters).filter(Boolean).length + (globalSearch ? 1 : 0);
+  const activeFiltersCount =
+    Object.values(columnFilters).filter((values) => values.length > 0).length + (globalSearch ? 1 : 0);
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Global Search */}
+        {/* Global Filter */}
         {enableGlobalSearch && (
           <div className="flex-1 min-w-[200px] max-w-md">
             <div className="relative">
-              <Search
+              <Filter
                 className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
                   isDark ? 'text-gray-400' : 'text-gray-500'
                 }`}
               />
               <input
                 type="text"
-                placeholder="Search across all columns..."
+                placeholder="Filter across all columns..."
                 value={globalSearch}
                 onChange={(e) => {
                   setGlobalSearch(e.target.value);
@@ -310,13 +360,14 @@ export function EnhancedDataTable<T>({
                       {/* Filter Icon */}
                       {column.filterable && enableColumnFilters && (
                         <button
+                          type="button"
                           onClick={() =>
                             setActiveFilterColumn(
                               activeFilterColumn === column.key ? null : column.key
                             )
                           }
                           className={`p-1 rounded transition-colors ${
-                            columnFilters[column.key]
+                            (columnFilters[column.key]?.length || 0) > 0
                               ? 'text-blue-500'
                               : isDark
                               ? 'text-gray-400 hover:text-white'
@@ -328,35 +379,97 @@ export function EnhancedDataTable<T>({
                       )}
                     </div>
 
-                    {/* Column Filter Input */}
+                    {/* Column Filter Values */}
                     {column.filterable &&
                       enableColumnFilters &&
                       activeFilterColumn === column.key && (
-                        <div className="mt-2">
-                          <div className="relative">
-                            <input
-                              type={column.filterType === 'number' ? 'number' : 'text'}
-                              placeholder={`Filter ${column.header.toLowerCase()}...`}
-                              value={columnFilters[column.key] || ''}
-                              onChange={(e) =>
-                                handleColumnFilter(column.key, e.target.value)
-                              }
-                              className={`w-full px-2 py-1.5 rounded border text-xs ${
-                                isDark
-                                  ? 'bg-gray-800 border-gray-600 text-white'
-                                  : 'bg-white border-gray-300 text-gray-900'
-                              }`}
-                            />
-                            {columnFilters[column.key] && (
-                              <button
-                                onClick={() => clearColumnFilter(column.key)}
-                                className={`absolute right-2 top-1/2 -translate-y-1/2 ${
+                        <div className="mt-2 rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-800">
+                          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                            <div className="relative">
+                              <Search
+                                className={`absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${
                                   isDark ? 'text-gray-400' : 'text-gray-500'
                                 }`}
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                              />
+                              <input
+                                type="text"
+                                placeholder="Search values..."
+                                value={filterSearch[column.key] || ''}
+                                onChange={(e) =>
+                                  setFilterSearch((prev) => ({
+                                    ...prev,
+                                    [column.key]: e.target.value,
+                                  }))
+                                }
+                                className={`w-full pl-8 pr-2 py-1.5 rounded border text-xs ${
+                                  isDark
+                                    ? 'bg-gray-800 border-gray-600 text-white'
+                                    : 'bg-white border-gray-300 text-gray-900'
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="px-2 py-1.5 border-b border-gray-200 dark:border-gray-700">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelectAllColumnValues(column.key)}
+                              className={`w-full text-left text-xs font-medium ${
+                                isDark ? 'text-gray-200 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                              }`}
+                            >
+                              {(columnFilters[column.key]?.length || 0) ===
+                              getColumnUniqueValues(column.key).length
+                                ? 'Clear all'
+                                : 'Select all'}
+                            </button>
+                          </div>
+
+                          <div className="max-h-48 overflow-auto p-1.5">
+                            {getFilteredUniqueValues(column.key).length === 0 ? (
+                              <div className={`px-2 py-3 text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                No matching values
+                              </div>
+                            ) : (
+                              getFilteredUniqueValues(column.key).map((value) => {
+                                const selectedValues = columnFilters[column.key] || [];
+                                const isChecked = selectedValues.includes(value);
+                                const displayValue = value === EMPTY_FILTER_VALUE ? '(Empty)' : value;
+
+                                return (
+                                  <label
+                                    key={`${column.key}-${value}`}
+                                    className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer ${
+                                      isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleColumnFilterValue(column.key, value)}
+                                      className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="truncate" title={displayValue}>
+                                      {displayValue}
+                                    </span>
+                                  </label>
+                                );
+                              })
                             )}
+                          </div>
+
+                          <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => clearColumnFilter(column.key)}
+                              className={`text-xs px-2.5 py-1 rounded ${
+                                isDark
+                                  ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              Clear
+                            </button>
                           </div>
                         </div>
                       )}

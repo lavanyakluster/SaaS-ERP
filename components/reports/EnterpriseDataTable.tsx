@@ -4,7 +4,7 @@
  * Features:
  * ✅ Column-specific filtering with multi-type support (text, number, date, select)
  * ✅ Multi-column sorting (ascending/descending)
- * ✅ Global search across all columns
+ * ✅ Global filter across all columns (filter icon is used)
  * ✅ Pagination with customizable page sizes
  * ✅ Column visibility toggle
  * ✅ Export to CSV/Excel
@@ -391,17 +391,17 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Global Search */}
+              {/* Global Filter */}
               {enableGlobalSearch && (
                 <div className="relative">
-                  <Search className={`absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                  <Filter className={`absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 ${
                     isDark ? 'text-gray-400' : 'text-gray-500'
                   }`} />
                   <input
                     type="text"
                     value={globalSearch}
                     onChange={(e) => handleGlobalSearch(e.target.value)}
-                    placeholder="Search..."
+                    placeholder="Filter..."
                     className={`pl-8 pr-3 py-1.5 text-sm rounded border ${
                       isDark 
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'

@@ -75,8 +75,9 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
       
       // Update form data
       setFormData({
-        roleName: role.name,
-        description: role.description,
+        // fall back to empty string if API returns undefined/null
+        roleName: role.name ?? '',
+        description: role.description ?? '',
         additionalPermissions: parsedAdditionalPermissions,
         backDays: 0,
         timeRestrictionEnabled: false,
@@ -130,6 +131,13 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
         Role: formData.roleName.trim(),
         Description: formData.description.trim(),
         Permissions: allPermissions,
+        ...(formData.backDays > 0 && { backDays: formData.backDays }),
+        ...(formData.timeRestrictionEnabled && {
+          timeRestrictionEnabled: true,
+          timeFrom: formData.timeFrom,
+          timeTo: formData.timeTo,
+          offDay: formData.offDay,
+        }),
       };
 
       console.log(editRoleId ? 'Updating role:' : 'Creating role:', payload);
@@ -231,7 +239,7 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                     </label>
                     <input
                       type="text"
-                      value={formData.roleName}
+                      value={formData.roleName ?? ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, roleName: e.target.value }))}
                       className={inputClassName}
                       placeholder="e.g., Sales Manager"
@@ -245,7 +253,7 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
                       Description
                     </label>
                     <textarea
-                      value={formData.description}
+                      value={formData.description ?? ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       className={`${inputClassName} min-h-[80px] sm:min-h-[100px] resize-none`}
                       placeholder="Describe the role responsibilities..."

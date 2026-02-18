@@ -20,12 +20,15 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   useReactTable,
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
   type PaginationState,
   type VisibilityState,
+  type FilterFn,
 } from '@tanstack/react-table';
 import {
   ArrowUpDown,
@@ -95,10 +98,28 @@ export function EnhancedDataTable<TData>({
   const [filterMenuOpen, setFilterMenuOpen] = useState<FilterMenuState | null>(null);
   const [pinnedColumns, setPinnedColumns] = useState<Set<string>>(new Set());
   const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, Set<any>>>({}); 
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, Set<string>>>({});
 
   const menuRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  const toFilterValue = (value: unknown): string => {
+    if (value === null || value === undefined || value === '') return '(Empty)';
+    return String(value);
+  };
+
+  const multiSelectFilter: FilterFn<TData> = (row, columnId, filterValue) => {
+    if (Array.isArray(filterValue)) {
+      if (filterValue.length === 0) return true;
+      return filterValue.includes(toFilterValue(row.getValue(columnId)));
+    }
+
+    if (!filterValue) return true;
+
+    return toFilterValue(row.getValue(columnId))
+      .toLowerCase()
+      .includes(String(filterValue).toLowerCase());
+  };
 
   const table = useReactTable({
     data,
@@ -117,6 +138,14 @@ export function EnhancedDataTable<TData>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    filterFns: {
+      multiSelect: multiSelectFilter,
+    },
+    defaultColumn: {
+      filterFn: multiSelectFilter,
+    },
   });
 
   // Close menus when clicking outside
@@ -136,14 +165,16 @@ export function EnhancedDataTable<TData>({
 
   // Get unique values for a column
   const getColumnUniqueValues = (columnId: string) => {
-    const values = new Set<any>();
-    data.forEach((row: any) => {
-      const value = row[columnId];
-      if (value !== null && value !== undefined && value !== '') {
-        values.add(value);
-      }
-    });
-    return Array.from(values).sort();
+    const column = table.getColumn(columnId);
+    if (!column) return [];
+
+    const values = Array.from(column.getFacetedUniqueValues().keys()).map((value) =>
+      toFilterValue(value)
+    );
+
+    return Array.from(new Set(values)).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
   };
 
   // Handle column menu click
@@ -195,8 +226,8 @@ export function EnhancedDataTable<TData>({
   };
 
   // Handle filter selection
-  const handleFilterSelect = (columnId: string, value: any) => {
-    const current = selectedFilters[columnId] || new Set();
+  const handleFilterSelect = (columnId: string, value: string) => {
+    const current = selectedFilters[columnId] || new Set<string>();
     const newSet = new Set(current);
     
     if (newSet.has(value)) {
@@ -205,10 +236,10 @@ export function EnhancedDataTable<TData>({
       newSet.add(value);
     }
     
-    setSelectedFilters({
-      ...selectedFilters,
+    setSelectedFilters((prev) => ({
+      ...prev,
       [columnId]: newSet,
-    });
+    }));
 
     // Apply filter to table
     if (newSet.size > 0) {
@@ -221,22 +252,22 @@ export function EnhancedDataTable<TData>({
   // Handle select all filters
   const handleSelectAllFilters = (columnId: string) => {
     const values = getColumnUniqueValues(columnId);
-    const current = selectedFilters[columnId] || new Set();
+    const current = selectedFilters[columnId] || new Set<string>();
     
     if (current.size === values.length) {
       // Deselect all
-      setSelectedFilters({
-        ...selectedFilters,
+      setSelectedFilters((prev) => ({
+        ...prev,
         [columnId]: new Set(),
-      });
+      }));
       table.getColumn(columnId)?.setFilterValue(undefined);
     } else {
       // Select all
       const newSet = new Set(values);
-      setSelectedFilters({
-        ...selectedFilters,
+      setSelectedFilters((prev) => ({
+        ...prev,
         [columnId]: newSet,
-      });
+      }));
       table.getColumn(columnId)?.setFilterValue(Array.from(newSet));
     }
   };

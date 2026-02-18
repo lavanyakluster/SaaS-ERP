@@ -23,6 +23,8 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   useReactTable,
   type ColumnDef,
   type SortingState,
@@ -48,6 +50,7 @@ import {
   Pin,
   PinOff,
   GripVertical,
+  Filter,
 } from 'lucide-react';
 
 export interface DataTableProps<TData> {
@@ -67,6 +70,11 @@ export interface DataTableProps<TData> {
   className?: string;
 }
 
+interface FilterMenuState {
+  columnId: string;
+  position: { x: number; y: number };
+}
+
 export function DataTable<TData>({
   data,
   columns,
@@ -83,6 +91,7 @@ export function DataTable<TData>({
   onRowClick,
   className = '',
 }: DataTableProps<TData>) {
+  const EMPTY_FILTER_VALUE = '__EMPTY__';
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -96,9 +105,19 @@ export function DataTable<TData>({
   });
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [filterMenu, setFilterMenu] = useState<FilterMenuState | null>(null);
+  const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
+
+  const toFilterValue = (value: unknown) =>
+    value === null || value === undefined || value === '' ? EMPTY_FILTER_VALUE : String(value);
 
   // ✅ Custom filter function for numeric columns
   const numericFilter: FilterFn<TData> = (row, columnId, filterValue) => {
+    if (Array.isArray(filterValue)) {
+      if (filterValue.length === 0) return true;
+      return filterValue.includes(toFilterValue(row.getValue(columnId)));
+    }
+
     const value = row.getValue(columnId);
     if (value === null || value === undefined) return false;
     
@@ -133,6 +152,19 @@ export function DataTable<TData>({
     return String(numValue).includes(String(filterNum));
   };
 
+  const multiSelectFilter: FilterFn<TData> = (row, columnId, filterValue) => {
+    if (Array.isArray(filterValue)) {
+      if (filterValue.length === 0) return true;
+      return filterValue.includes(toFilterValue(row.getValue(columnId)));
+    }
+
+    if (!filterValue) return true;
+
+    return toFilterValue(row.getValue(columnId))
+      .toLowerCase()
+      .includes(String(filterValue).toLowerCase());
+  };
+
   const table = useReactTable({
     data,
     columns,
@@ -158,17 +190,20 @@ export function DataTable<TData>({
     getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: enableFiltering ? getFilteredRowModel() : undefined,
     getPaginationRowModel: enablePagination ? getPaginationRowModel() : undefined,
+    getFacetedRowModel: enableFiltering ? getFacetedRowModel() : undefined,
+    getFacetedUniqueValues: enableFiltering ? getFacetedUniqueValues() : undefined,
     columnResizeMode: 'onChange',
     enableColumnPinning: enableColumnPinning,
     filterFns: {
       numeric: numericFilter,
+      multiSelect: multiSelectFilter,
     },
     globalFilterFn: 'includesString',
     defaultColumn: {
       size: 200,
       minSize: 100,
       maxSize: 800,
-      filterFn: 'auto', // Will auto-detect based on data type
+      filterFn: multiSelectFilter,
     },
   });
 
@@ -235,21 +270,92 @@ export function DataTable<TData>({
     }
   };
 
+  const getColumnFilterValues = (columnId: string): string[] => {
+    const filterValue = table.getColumn(columnId)?.getFilterValue();
+    return Array.isArray(filterValue) ? filterValue.map(String) : [];
+  };
+
+  const getColumnUniqueValues = (columnId: string): string[] => {
+    const column = table.getColumn(columnId);
+    if (!column) return [];
+
+    const values = Array.from(column.getFacetedUniqueValues().keys())
+      .map((value) => toFilterValue(value))
+      .filter((value, index, arr) => arr.indexOf(value) === index);
+
+    return values.sort((a, b) => {
+      if (a === EMPTY_FILTER_VALUE) return 1;
+      if (b === EMPTY_FILTER_VALUE) return -1;
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  };
+
+  const getFilteredUniqueValues = (columnId: string): string[] => {
+    const searchTerm = (filterSearch[columnId] || '').toLowerCase().trim();
+    if (!searchTerm) return getColumnUniqueValues(columnId);
+
+    return getColumnUniqueValues(columnId).filter((value) => {
+      const displayValue = value === EMPTY_FILTER_VALUE ? '(Empty)' : value;
+      return displayValue.toLowerCase().includes(searchTerm);
+    });
+  };
+
+  const toggleFilterMenu = (columnId: string, event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setFilterMenu((prev) =>
+      prev?.columnId === columnId
+        ? null
+        : {
+            columnId,
+            position: { x: rect.left, y: rect.bottom + 6 },
+          }
+    );
+  };
+
+  const toggleColumnFilterValue = (columnId: string, value: string) => {
+    const column = table.getColumn(columnId);
+    if (!column) return;
+
+    const current = getColumnFilterValues(columnId);
+    const next = current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [...current, value];
+
+    column.setFilterValue(next.length ? next : undefined);
+  };
+
+  const toggleSelectAllColumnValues = (columnId: string) => {
+    const column = table.getColumn(columnId);
+    if (!column) return;
+
+    const allValues = getColumnUniqueValues(columnId);
+    const selectedValues = getColumnFilterValues(columnId);
+    const shouldClear = selectedValues.length === allValues.length;
+
+    column.setFilterValue(shouldClear ? undefined : allValues);
+  };
+
+  const clearColumnFilter = (columnId: string) => {
+    table.getColumn(columnId)?.setFilterValue(undefined);
+  };
+
   return (
     <div className={`flex flex-col ${className}`}>
       {/* Toolbar */}
       <div className={`flex items-center justify-between gap-4 p-4 border-b ${
         isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50/50'
       }`}>
-        {/* Global Search */}
+        {/* Global Filter */}
         {enableGlobalFilter && (
           <div className="relative flex-1 max-w-sm">
-            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+            <Filter className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
               isDark ? 'text-gray-400' : 'text-gray-500'
             }`} />
             <input
               type="text"
-              placeholder="Search all columns..."
+              placeholder="Filter all columns..."
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className={`w-full pl-10 pr-10 py-2 rounded-lg border text-sm transition-all ${
@@ -380,6 +486,8 @@ export function DataTable<TData>({
                   const isPinned = header.column.getIsPinned();
                   const canResize = header.column.getCanResize() && enableColumnResizing;
                   const canReorder = enableColumnReordering;
+                  const selectedFilterValues = getColumnFilterValues(header.column.id);
+                  const hasActiveFilter = selectedFilterValues.length > 0;
 
                   return (
                     <th
@@ -428,6 +536,23 @@ export function DataTable<TData>({
                             )}
                           </div>
 
+                          {enableFiltering && header.column.getCanFilter() && (
+                            <button
+                              type="button"
+                              onClick={(e) => toggleFilterMenu(header.column.id, e)}
+                              className={`p-1 rounded transition-colors ${
+                                hasActiveFilter
+                                  ? 'text-blue-500'
+                                  : isDark
+                                    ? 'text-gray-500 hover:text-gray-300'
+                                    : 'text-gray-400 hover:text-gray-700'
+                              }`}
+                              title="Filter column"
+                            >
+                              <Filter className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
                           {/* Column Resizer */}
                           {canResize && (
                             <div
@@ -442,24 +567,6 @@ export function DataTable<TData>({
                               }`}
                             />
                           )}
-                        </div>
-                      )}
-                      
-                      {/* Column Filter */}
-                      {enableFiltering && header.column.getCanFilter() && (
-                        <div className="mt-3">
-                          <input
-                            type="text"
-                            value={(header.column.getFilterValue() ?? '') as string}
-                            onChange={(e) => header.column.setFilterValue(e.target.value)}
-                            placeholder={`Filter...`}
-                            className={`w-full px-3 py-2 text-xs rounded border ${
-                              isDark
-                                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
-                            onClick={(e) => e.stopPropagation()}
-                          />
                         </div>
                       )}
                     </th>
@@ -519,6 +626,107 @@ export function DataTable<TData>({
           </tbody>
         </table>
       </div>
+
+      {/* Column Filter Menu */}
+      {filterMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setFilterMenu(null)} />
+          <div
+            className={`fixed z-50 w-72 rounded-lg border shadow-xl overflow-hidden ${
+              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}
+            style={{ left: filterMenu.position.x, top: filterMenu.position.y }}
+          >
+            <div className={`p-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="relative">
+                <Search
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                />
+                <input
+                  type="text"
+                  value={filterSearch[filterMenu.columnId] || ''}
+                  onChange={(e) =>
+                    setFilterSearch((prev) => ({
+                      ...prev,
+                      [filterMenu.columnId]: e.target.value,
+                    }))
+                  }
+                  placeholder="Search values..."
+                  className={`w-full pl-9 pr-3 py-2 text-xs rounded border ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                  } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                />
+              </div>
+            </div>
+
+            <div className={`px-3 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <button
+                type="button"
+                onClick={() => toggleSelectAllColumnValues(filterMenu.columnId)}
+                className={`w-full text-left text-xs font-medium ${
+                  isDark ? 'text-gray-200 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                {getColumnFilterValues(filterMenu.columnId).length ===
+                getColumnUniqueValues(filterMenu.columnId).length
+                  ? 'Clear all'
+                  : 'Select all'}
+              </button>
+            </div>
+
+            <div className="max-h-64 overflow-auto p-2">
+              {getFilteredUniqueValues(filterMenu.columnId).length === 0 ? (
+                <div className={`px-2 py-4 text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  No matching values
+                </div>
+              ) : (
+                getFilteredUniqueValues(filterMenu.columnId).map((value) => {
+                  const selectedValues = getColumnFilterValues(filterMenu.columnId);
+                  const isChecked = selectedValues.includes(value);
+                  const displayValue = value === EMPTY_FILTER_VALUE ? '(Empty)' : value;
+
+                  return (
+                    <label
+                      key={`${filterMenu.columnId}-${value}`}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer ${
+                        isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleColumnFilterValue(filterMenu.columnId, value)}
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="truncate" title={displayValue}>
+                        {displayValue}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <div className={`p-2 border-t flex justify-end ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <button
+                type="button"
+                onClick={() => clearColumnFilter(filterMenu.columnId)}
+                className={`text-xs px-3 py-1.5 rounded ${
+                  isDark
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Pagination Controls */}
       {enablePagination && (

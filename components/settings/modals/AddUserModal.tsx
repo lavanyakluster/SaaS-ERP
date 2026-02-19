@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Mail, User, Shield, Clock, Loader2 } from 'lucide-react';
+import { X, Mail, User, Shield, Clock, Loader2, KeyRound } from 'lucide-react';
 import { ADDITIONAL_PERMISSIONS, OFF_DAY_OPTIONS } from '@/lib/constants/permissions';
 import { PermissionsPanel } from './PermissionsPanel';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useRoles, useRoleById } from '@/lib/hooks/useRoles';
 import { useUserById, useCreateUser, useUpdateUser } from '@/lib/hooks/useUsers';
-import { useBranches } from '@/lib/hooks';
 import { parseAdditionalPermissionsFromApi, parseModulePermissionsFromApi, combineAllPermissions } from '@/lib/utils/permissions';
-import { changeEmail } from '@/lib/api/users.api';
+import { validatePasswordConfirmation, validatePasswordField } from '@/lib/utils/validation';
 import { toast } from 'sonner';
 
 interface AddUserModalProps {
@@ -22,6 +21,8 @@ interface AddUserModalProps {
 interface UserFormData {
   name: string;
   email: string;
+  password: string;
+  confirmPassword: string;
   role: string;
   backDays: number;
   additionalPermissions: Record<string, boolean>;
@@ -36,7 +37,6 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
   const { data: rolesData, isLoading: rolesLoading } = useRoles();
 
   // ✅ Fetch all branches
-  const { data: branchesData, isLoading: branchesLoading } = useBranches();
 
   // Fetch user details if in edit mode
   const { data: userData, isLoading: userLoading } = useUserById(userId ?? null);
@@ -53,6 +53,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
   const [formData, setFormData] = useState<UserFormData>({
     name: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     role: initialRole,
     backDays: 0,
     additionalPermissions: {},
@@ -62,8 +64,10 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
     offDay: 'none',
   });
 
-  // Fetch selected role's permissions
-  const roleByIdQuery = useRoleById(formData.role || null);
+  // Fetch selected role details only when permissions are missing from list data
+  const selectedRoleFromList = rolesData?.data?.find((role) => role.id === formData.role);
+  const shouldFetchRoleById = Boolean(formData.role) && !(selectedRoleFromList?.permissions?.length);
+  const roleByIdQuery = useRoleById(shouldFetchRoleById ? formData.role : null);
 
   // Initialize permissions hook
   const { permissions, handlers } = usePermissions();
@@ -82,6 +86,8 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       setFormData({
         name: '',
         email: '',
+        password: '',
+        confirmPassword: '',
         role: rolesData?.data?.[0]?.id || '',
         backDays: 0,
         additionalPermissions: {},
@@ -106,27 +112,40 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       setFormData({
         name: userData.name ?? '',
         email: userData.email ?? '',
+        password: '',
+        confirmPassword: '',
         role: userData.roleId ?? '',
-        backDays: 0, // TODO: Get from userData if available
+        backDays: userData.backDaysLimit ?? 0,
         additionalPermissions: parseAdditionalPermissionsFromApi(userData.permissions?.allow || []),
-        timeRestrictionEnabled: false,
-        timeFrom: '09:00',
-        timeTo: '18:00',
-        offDay: 'none',
+        timeRestrictionEnabled: userData.timeRestrictionEnabled ?? false,
+        timeFrom: userData.timeFrom ?? '09:00',
+        timeTo: userData.timeTo ?? '18:00',
+        offDay: userData.offDay ?? 'none',
       });
 
       // Parse and set module permissions using common utility
       const modulePerms = parseModulePermissionsFromApi(userData.permissions?.allow || []);
       handlers.setModulePermissions(modulePerms);
 
-      // Load branches if available (handle both 'branches' and 'Branches')
-      const userBranches = userData.branches || (userData as any).Branches || [];
+      // Load branches (support legacy "Branches" while keeping unique branch codes)
+      const mergedBranches = [
+        ...(Array.isArray(userData.branches) ? userData.branches : []),
+        ...(Array.isArray(userData.Branches) ? userData.Branches : []),
+      ];
+      const userBranches = Array.from(
+        new Set(
+          mergedBranches
+            .filter((branch): branch is string => typeof branch === 'string')
+            .map((branch) => branch.trim())
+            .filter((branch) => branch.length > 0)
+        )
+      );
       console.log('🌿 User branches from API (raw):', userBranches);
       console.log('🌿 Type of branches:', typeof userBranches, Array.isArray(userBranches));
       console.log('🌿 Branches length:', userBranches.length);
       console.log('🌿 First branch (if exists):', userBranches[0]);
 
-      if (userBranches && Array.isArray(userBranches) && userBranches.length > 0) {
+      if (userBranches.length > 0) {
         console.log('✅ Setting branches:', userBranches);
         handlers.setBranches(userBranches);
       } else {
@@ -175,7 +194,7 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
 
   const isEditMode = !!userId;
   const isLoadingUser = userLoading && isEditMode;
-  const isSubmitting = createUserMutation.isPending;
+  const isSubmitting = createUserMutation.isPending || updateUserMutation.isPending;
 
   const handleAdditionalPermissionToggle = (permId: string) => {
     setFormData(prev => ({
@@ -204,82 +223,83 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
       return;
     }
 
+    const hasPasswordInput =
+      formData.password.trim().length > 0 || formData.confirmPassword.trim().length > 0;
+
+    if (!isEditMode || hasPasswordInput) {
+      const passwordValidation = validatePasswordField(formData.password);
+      if (!passwordValidation.isValid) {
+        toast.error(passwordValidation.error || 'Please enter a valid password');
+        return;
+      }
+
+      const confirmPasswordValidation = validatePasswordConfirmation(formData.password, formData.confirmPassword);
+      if (!confirmPasswordValidation.isValid) {
+        toast.error(confirmPasswordValidation.error || 'Passwords do not match');
+        return;
+      }
+    }
+
     // Collect all permissions using the common utility
     const allowPermissions = combineAllPermissions(
       permissions.modulePermissions,
       formData.additionalPermissions
     );
     const denyPermissions: string[] = [];
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    const uniqueSelectedBranches = Array.from(new Set(permissions.selectedBranches));
 
     // Create or update the user via API
     try {
       let result;
-      let createdOrUpdatedUserId: string;
 
       if (isEditMode) {
-        // Update user (without status field)
         result = await updateUserMutation.mutateAsync({
           userId: userId,
           userData: {
             name: formData.name,
-            email: formData.email,
+            email: normalizedEmail,
+            password: hasPasswordInput ? formData.password : undefined,
             roleid: formData.role,
+            roleId: formData.role,
             permissions: {
               allow: allowPermissions,
               deny: denyPermissions,
             },
-            Branches: permissions.selectedBranches,
+            branches: uniqueSelectedBranches,
+            backDaysLimit: formData.backDays,
+            timeRestrictionEnabled: formData.timeRestrictionEnabled,
+            timeFrom: formData.timeRestrictionEnabled ? formData.timeFrom : undefined,
+            timeTo: formData.timeRestrictionEnabled ? formData.timeTo : undefined,
+            offDay: formData.offDay,
           }
         });
 
-        createdOrUpdatedUserId = userId;
-
-        // Check if email was changed in edit mode
-        if (userData && formData.email !== userData.email) {
-          console.log('📧 Email changed in edit mode, calling ChangeEmail API...');
-          try {
-            await changeEmail(userId, { NewEmail: formData.email });
-            console.log('✅ Email changed successfully');
-            toast.success('Email updated successfully');
-          } catch (emailError: any) {
-            console.error('❌ Failed to change email:', emailError);
-            // Show warning but don't fail the entire update
-            toast.error('User updated but email change failed. Please try again.');
-          }
+        if (result.status === 'exists') {
+          toast.error(result.message || 'Email already exists for this tenant');
+          return;
         }
       } else {
-        // Create user (with status field)
         result = await createUserMutation.mutateAsync({
           name: formData.name,
-          email: formData.email,
+          email: normalizedEmail,
+          password: formData.password,
           roleid: formData.role,
+          roleId: formData.role,
           permissions: {
             allow: allowPermissions,
             deny: denyPermissions,
           },
-          Branches: permissions.selectedBranches,
+          branches: uniqueSelectedBranches,
+          backDaysLimit: formData.backDays,
+          timeRestrictionEnabled: formData.timeRestrictionEnabled,
+          timeFrom: formData.timeRestrictionEnabled ? formData.timeFrom : undefined,
+          timeTo: formData.timeRestrictionEnabled ? formData.timeTo : undefined,
+          offDay: formData.offDay,
           status: true,
         });
 
         console.log('📝 Create user response:', result);
-
-        // Extract userId from response (try multiple possible locations)
-        const newUserId = result.userId || result.data?.userId || result.data?.organizationUserId;
-
-        if (newUserId) {
-          console.log('📧 Triggering ChangeEmail API for newly created user:', newUserId);
-          try {
-            const emailChangeResult = await changeEmail(newUserId, { NewEmail: formData.email });
-            console.log('✅ ChangeEmail API called successfully after user creation:', emailChangeResult);
-          } catch (emailError: any) {
-            console.error('❌ Failed to call ChangeEmail after user creation:', emailError);
-            // Log but don't show error to user as user was created successfully
-            console.warn('User created but email confirmation email may not have been sent');
-          }
-        } else {
-          console.warn('⚠️ Could not extract userId from create response, skipping ChangeEmail API');
-          console.warn('Response structure:', JSON.stringify(result, null, 2));
-        }
       }
 
       // Check if the email already exists
@@ -398,6 +418,44 @@ export function AddUserModal({ isOpen, onClose, isDark, userId }: AddUserModalPr
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                         className={`${inputClassName} pl-10`}
                         placeholder="john.doe@company.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      {isEditMode ? 'New Password (Optional)' : 'Create Password'}
+                    </label>
+                    <div className="relative">
+                      <KeyRound className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`} />
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                        className={`${inputClassName} pl-10`}
+                        placeholder={isEditMode ? 'Leave blank to keep current password' : 'Create a strong password'}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      {isEditMode ? 'Confirm New Password' : 'Confirm Password'}
+                    </label>
+                    <div className="relative">
+                      <KeyRound className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`} />
+                      <input
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        className={`${inputClassName} pl-10`}
+                        placeholder={isEditMode ? 'Confirm new password' : 'Confirm password'}
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>

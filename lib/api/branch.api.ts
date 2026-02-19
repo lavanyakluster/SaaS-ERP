@@ -28,5 +28,7 @@ export interface BranchResponse extends Array<Branch> {}
 export const getAllBranches = async (year?: string): Promise<Branch[]> => {
   const params = year ? { year } : {};
   const response = await apiClient.get<Branch[]>('/branchAll', { params });
-  return response.data;
+  return Array.from(
+    new Map(response.data.map((branch) => [branch.bR_COD, branch])).values()
+  );
 };

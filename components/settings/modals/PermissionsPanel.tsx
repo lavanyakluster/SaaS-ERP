@@ -41,11 +41,18 @@ export function PermissionsPanel({
   const { data: branchesData, isLoading: branchesLoading } = useBranches();
   
   // ✅ Map API response to expected format
-  const branches = (branchesData || []).map(branch => ({
-    id: branch.bR_COD, // Use branch code as ID
-    name: branch.bR_NM, // Use branch name
-    businessUnit: branch.bR_BUNIT, // Include business unit
-  }));
+  const branches = Array.from(
+    new Map(
+      (branchesData || []).map((branch) => [
+        branch.bR_COD,
+        {
+          id: branch.bR_COD, // Use branch code as ID
+          name: branch.bR_NM, // Use branch name
+          businessUnit: branch.bR_BUNIT, // Include business unit
+        },
+      ])
+    ).values()
+  );
 
   const filteredBranches = branches.filter(branch =>
     branch.name.toLowerCase().includes(branchSearch.toLowerCase()) ||

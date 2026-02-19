@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id                        String             @id @default(uuid()) @db.UniqueIdentifier
+  organizationId            String             @map("organization_id") @db.UniqueIdentifier
+  name                      String             @db.NVarChar(150)
+  description               String?            @db.NVarChar(500)
+  permissionsJson           String             @default("[]") @map("permissions_json") @db.NVarChar(Max)
+  branchesJson              String             @default("[]") @map("branches_json") @db.NVarChar(Max)
+  additionalPermissionsJson String             @default("[]") @map("additional_permissions_json") @db.NVarChar(Max)
+  backDaysLimit             Int                @default(0) @map("back_days_limit")
+  timeRestrictionEnabled    Boolean            @default(false) @map("time_restriction_enabled")
+  timeFrom                  String?            @map("time_from") @db.NVarChar(5)
+  timeTo                    String?            @map("time_to") @db.NVarChar(5)
+  offDay                    String?            @map("off_day") @db.NVarChar(20)
+  isSystemRole              Boolean            @default(false) @map("is_system_role")
+  status                    String             @default("ACTIVE") @db.NVarChar(20)
+  createdAt                 DateTime           @default(now()) @map("created_at")
+  updatedAt                 DateTime           @updatedAt @map("updated_at")
+  users                     OrganizationUser[]
+
+  @@unique([organizationId, name], map: "UQ_roles_org_name")
+  @@index([organizationId], map: "IX_roles_organization_id")
+  @@map("roles")
+}
+
+model OrganizationUser {
+  id                    String   @id @default(uuid()) @db.UniqueIdentifier
+  userId                String   @map("user_id") @db.UniqueIdentifier
+  organizationId        String   @map("organization_id") @db.UniqueIdentifier
+  roleId                String?  @map("role_id") @db.UniqueIdentifier
+  name                  String   @db.NVarChar(200)
+  email                 String   @db.NVarChar(255)
+  status                String   @default("ACTIVE") @db.NVarChar(20)
+  permissionsAllowJson  String   @default("[]") @map("permissions_allow_json") @db.NVarChar(Max)
+  permissionsDenyJson   String   @default("[]") @map("permissions_deny_json") @db.NVarChar(Max)
+  branchesJson          String   @default("[]") @map("branches_json") @db.NVarChar(Max)
+  backDaysLimit         Int      @default(0) @map("back_days_limit")
+  timeRestrictionEnabled Boolean @default(false) @map("time_restriction_enabled")
+  timeFrom              String?  @map("time_from") @db.NVarChar(5)
+  timeTo                String?  @map("time_to") @db.NVarChar(5)
+  offDay                String?  @map("off_day") @db.NVarChar(20)
+  invitedBy             String?  @map("invited_by") @db.UniqueIdentifier
+  joinedAt              DateTime? @map("joined_at")
+  lastActiveAt          DateTime? @map("last_active_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  role                  Role?    @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([organizationId, email], map: "UQ_organization_users_org_email")
+  @@index([organizationId], map: "IX_organization_users_organization_id")
+  @@index([roleId], map: "IX_organization_users_role_id")
+  @@map("organization_users")
+}

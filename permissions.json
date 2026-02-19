@@ -1,0 +1,113 @@
+﻿[
+    {
+        "RowError":  "",
+        "RowState":  2,
+        "Table":  {
+                      "CaseSensitive":  false,
+                      "IsInitialized":  true,
+                      "RemotingFormat":  0,
+                      "ChildRelations":  "",
+                      "Columns":  "id code description",
+                      "Constraints":  "",
+                      "DataSet":  "System.Data.DataSet",
+                      "DefaultView":  "System.Data.DataRowView System.Data.DataRowView System.Data.DataRowView",
+                      "DisplayExpression":  "",
+                      "ExtendedProperties":  "System.Data.PropertyCollection",
+                      "HasErrors":  false,
+                      "Locale":  "en-US",
+                      "MinimumCapacity":  50,
+                      "ParentRelations":  "",
+                      "PrimaryKey":  "",
+                      "Rows":  "System.Data.DataRow System.Data.DataRow System.Data.DataRow",
+                      "TableName":  "Table",
+                      "Namespace":  "",
+                      "Prefix":  "",
+                      "Site":  null,
+                      "Container":  null,
+                      "DesignMode":  false
+                  },
+        "ItemArray":  [
+                          "a96fc92f-bb3d-41ea-a9ee-088df3ea83a8",
+                          "read_projects",
+                          "read_project"
+                      ],
+        "HasErrors":  false,
+        "id":  "a96fc92f-bb3d-41ea-a9ee-088df3ea83a8",
+        "code":  "read_projects",
+        "description":  "read_project"
+    },
+    {
+        "RowError":  "",
+        "RowState":  2,
+        "Table":  {
+                      "Rows":  "System.Data.DataRow System.Data.DataRow System.Data.DataRow",
+                      "CaseSensitive":  false,
+                      "IsInitialized":  true,
+                      "RemotingFormat":  0,
+                      "ChildRelations":  "",
+                      "Columns":  "id code description",
+                      "Constraints":  "",
+                      "DataSet":  "System.Data.DataSet",
+                      "DefaultView":  "System.Data.DataRowView System.Data.DataRowView System.Data.DataRowView",
+                      "DisplayExpression":  "",
+                      "ExtendedProperties":  "System.Data.PropertyCollection",
+                      "HasErrors":  false,
+                      "Locale":  "en-US",
+                      "MinimumCapacity":  50,
+                      "ParentRelations":  "",
+                      "PrimaryKey":  "",
+                      "TableName":  "Table",
+                      "Namespace":  "",
+                      "Prefix":  "",
+                      "Site":  null,
+                      "Container":  null,
+                      "DesignMode":  false
+                  },
+        "ItemArray":  [
+                          "eea22f02-db95-4feb-a8d2-89a2ea2d61b7",
+                          "read_users",
+                          "read_users"
+                      ],
+        "HasErrors":  false,
+        "id":  "eea22f02-db95-4feb-a8d2-89a2ea2d61b7",
+        "code":  "read_users",
+        "description":  "read_users"
+    },
+    {
+        "RowError":  "",
+        "RowState":  2,
+        "Table":  {
+                      "Rows":  "System.Data.DataRow System.Data.DataRow System.Data.DataRow",
+                      "CaseSensitive":  false,
+                      "IsInitialized":  true,
+                      "RemotingFormat":  0,
+                      "ChildRelations":  "",
+                      "Columns":  "id code description",
+                      "Constraints":  "",
+                      "DataSet":  "System.Data.DataSet",
+                      "DefaultView":  "System.Data.DataRowView System.Data.DataRowView System.Data.DataRowView",
+                      "DisplayExpression":  "",
+                      "ExtendedProperties":  "System.Data.PropertyCollection",
+                      "HasErrors":  false,
+                      "Locale":  "en-US",
+                      "MinimumCapacity":  50,
+                      "ParentRelations":  "",
+                      "PrimaryKey":  "",
+                      "TableName":  "Table",
+                      "Namespace":  "",
+                      "Prefix":  "",
+                      "Site":  null,
+                      "Container":  null,
+                      "DesignMode":  false
+                  },
+        "ItemArray":  [
+                          "19b26e87-2d2f-4c6b-9a17-b2768b4b76bd",
+                          "write_users",
+                          "write_user"
+                      ],
+        "HasErrors":  false,
+        "id":  "19b26e87-2d2f-4c6b-9a17-b2768b4b76bd",
+        "code":  "write_users",
+        "description":  "write_user"
+    }
+]

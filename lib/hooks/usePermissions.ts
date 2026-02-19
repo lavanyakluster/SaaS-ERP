@@ -180,9 +180,10 @@ export function usePermissions(initialState?: Partial<PermissionsState>) {
   }, []);
 
   const setBranches = useCallback((branches: string[]) => {
+    const uniqueBranches = Array.from(new Set(branches.filter((branch) => typeof branch === 'string' && branch.trim().length > 0)));
     setState(prev => ({
       ...prev,
-      selectedBranches: branches,
+      selectedBranches: uniqueBranches,
     }));
   }, []);
 

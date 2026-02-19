@@ -1,28 +1,47 @@
 /**
  * Roles API
- * Handles role management operations
+ * Local Prisma-backed CRUD endpoints for settings UI
  */
 
-import { apiClient } from './client';
+import { settingsApiClient } from './settings-local-client';
 
 export interface CreateRoleRequest {
-  Role: string;
-  Description: string;
-  Permissions: string[];
+  Role?: string;
+  role?: string;
+  name?: string;
+  Description?: string;
+  description?: string;
+  Permissions?: string[];
+  permissions?: string[];
+  Branches?: string[];
+  branches?: string[];
+  AdditionalPermissions?: string[];
+  additionalPermissions?: string[];
+  BackDaysLimit?: number;
+  backDaysLimit?: number;
+  TimeRestrictionEnabled?: boolean;
+  timeRestrictionEnabled?: boolean;
+  TimeFrom?: string;
+  timeFrom?: string;
+  TimeTo?: string;
+  timeTo?: string;
+  OffDay?: string;
+  offDay?: string;
+  status?: string;
 }
 
-export interface UpdateRoleRequest {
-  Role: string;
-  Description: string;
-  Permissions: string[];
-}
+export type UpdateRoleRequest = CreateRoleRequest;
 
 export interface CreateRoleResponse {
   status: string;
+  message?: string;
+  data?: Role;
 }
 
 export interface UpdateRoleResponse {
   status: string;
+  message?: string;
+  data?: Role;
 }
 
 export interface Role {
@@ -30,7 +49,16 @@ export interface Role {
   name: string;
   description: string;
   created_At: string;
+  createdAt?: string;
   permissions: string[];
+  branches?: string[];
+  additionalPermissions?: string[];
+  backDaysLimit?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
+  status?: string;
 }
 
 export interface GetRolesResponse {
@@ -42,7 +70,7 @@ export interface GetRolesResponse {
  * Create a new role
  */
 export const createRole = async (data: CreateRoleRequest): Promise<CreateRoleResponse> => {
-  const response = await apiClient.post<CreateRoleResponse>('/roles', data);
+  const response = await settingsApiClient.post<CreateRoleResponse>('/roles', data);
   return response.data;
 };
 
@@ -50,7 +78,7 @@ export const createRole = async (data: CreateRoleRequest): Promise<CreateRoleRes
  * Get all roles
  */
 export const getRoles = async (): Promise<GetRolesResponse> => {
-  const response = await apiClient.get<GetRolesResponse>('/roles');
+  const response = await settingsApiClient.get<GetRolesResponse>('/roles');
   return response.data;
 };
 
@@ -63,7 +91,7 @@ export interface GetRoleResponse {
  * Get role by ID
  */
 export const getRoleById = async (roleId: string): Promise<Role> => {
-  const response = await apiClient.get<GetRoleResponse>(`/roles/${roleId}`);
+  const response = await settingsApiClient.get<GetRoleResponse>(`/roles/${roleId}`);
   return response.data.data;
 };
 
@@ -71,7 +99,7 @@ export const getRoleById = async (roleId: string): Promise<Role> => {
  * Update an existing role
  */
 export const updateRole = async (roleId: string, data: UpdateRoleRequest): Promise<UpdateRoleResponse> => {
-  const response = await apiClient.put<UpdateRoleResponse>(`/roles/${roleId}`, data);
+  const response = await settingsApiClient.put<UpdateRoleResponse>(`/roles/${roleId}`, data);
   return response.data;
 };
 
@@ -79,5 +107,5 @@ export const updateRole = async (roleId: string, data: UpdateRoleRequest): Promi
  * Delete a role
  */
 export const deleteRole = async (roleId: string): Promise<void> => {
-  await apiClient.delete(`/roles/${roleId}`);
+  await settingsApiClient.delete(`/roles/${roleId}`);
 };

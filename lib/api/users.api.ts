@@ -1,8 +1,9 @@
 /**
  * Users API
- * API functions for user management
+ * Local Prisma-backed CRUD endpoints for settings UI
  */
 
+import { settingsApiClient } from './settings-local-client';
 import { apiClient } from './client';
 
 // ============================================================================
@@ -32,37 +33,59 @@ export interface UserDetails {
     allow: string[];
     deny: string[];
   };
-  branches?: string[]; // Branches assigned to user (if API returns this)
+  branches?: string[];
+  Branches?: string[];
+  backDaysLimit?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
 }
 
 export interface CreateUserRequest {
   name: string;
   email: string;
-  roleid: string;
+  password?: string;
+  roleid?: string;
+  roleId?: string;
   permissions: {
     allow: string[];
     deny: string[];
   };
-  Branches: string[];
-  status: boolean;
+  Branches?: string[];
+  branches?: string[];
+  status?: boolean | string;
+  backDaysLimit?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
 }
 
 export interface UpdateUserRequest {
   name: string;
   email: string;
-  roleid: string;
+  password?: string;
+  roleid?: string;
+  roleId?: string;
   permissions: {
     allow: string[];
     deny: string[];
   };
-  Branches: string[];
-  // Note: status is NOT included in update requests per API spec
+  Branches?: string[];
+  branches?: string[];
+  status?: boolean | string;
+  backDaysLimit?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
 }
 
 export interface CreateUserResponse {
   status?: string;
   message: string;
-  userId?: string; // ✅ Add userId to response (returned by API after creation)
+  userId?: string;
   data?: {
     userId?: string;
     organizationUserId?: string;
@@ -94,11 +117,10 @@ export interface ChangeEmailResponse {
 // ============================================================================
 
 /**
- * Get all users in the organization
- * Organization context is derived from the JWT token
+ * Get all users in the selected organization.
  */
 export const getUsers = async (): Promise<User[]> => {
-  const response = await apiClient.get<User[]>('/users');
+  const response = await settingsApiClient.get<User[]>('/users');
   return response.data;
 };
 
@@ -108,48 +130,46 @@ export interface GetUserDetailResponse {
 }
 
 /**
- * Get user by ID
- * @param userId - The user ID to fetch
+ * Get user by ID.
  */
 export const getUserById = async (userId: string): Promise<UserDetails> => {
-  const response = await apiClient.get<GetUserDetailResponse>(`/user/${userId}`);
+  const response = await settingsApiClient.get<GetUserDetailResponse>(`/users/${userId}`);
   return response.data.data;
 };
 
 /**
- * Create a new user
- * @param user - The user details to create
+ * Create a new user.
  */
 export const createUser = async (user: CreateUserRequest): Promise<CreateUserResponse> => {
-  const response = await apiClient.post<CreateUserResponse>('/user', user);
+  const response = await settingsApiClient.post<CreateUserResponse>('/users', user);
   return response.data;
 };
 
 /**
- * Delete a user
- * @param userId - The user ID to delete
+ * Delete a user.
  */
 export const deleteUser = async (userId: string): Promise<DeleteUserResponse> => {
-  const response = await apiClient.delete<DeleteUserResponse>(`/user/${userId}`);
+  const response = await settingsApiClient.delete<DeleteUserResponse>(`/users/${userId}`);
   return response.data;
 };
 
 /**
- * Update a user
- * @param userId - The user ID to update
- * @param user - The user details to update
+ * Update a user.
  */
 export const updateUser = async (userId: string, user: UpdateUserRequest): Promise<CreateUserResponse> => {
-  const response = await apiClient.put<CreateUserResponse>(`/user/${userId}`, user);
+  const response = await settingsApiClient.put<CreateUserResponse>(`/users/${userId}`, user);
   return response.data;
 };
 
 /**
- * Change a user's email
- * @param userId - The user ID to update
- * @param email - The new email address
+ * Change a user's email.
  */
 export const changeEmail = async (userId: string, email: ChangeEmailRequest): Promise<ChangeEmailResponse> => {
-  const response = await apiClient.put<ChangeEmailResponse>(`/ChangeEmail/${userId}`, email);
-  return response.data;
+  const response = await apiClient.put(`/ChangeEmail/${userId}`, email);
+  const payload = response.data as { success?: boolean; message?: string; Message?: string } | undefined;
+
+  return {
+    success: payload?.success ?? true,
+    message: payload?.message ?? payload?.Message ?? 'Email update request submitted.',
+  };
 };

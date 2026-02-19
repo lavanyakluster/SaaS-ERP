@@ -6,7 +6,6 @@ import { ADDITIONAL_PERMISSIONS, OFF_DAY_OPTIONS } from '@/lib/constants/permiss
 import { PermissionsPanel } from './PermissionsPanel';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useCreateRole, useUpdateRole, useRoleById } from '@/lib/hooks/useRoles';
-import { useBranches } from '@/lib/hooks';
 import { combineAllPermissions, parseModulePermissionsFromApi, parseAdditionalPermissionsFromApi } from '@/lib/utils/permissions';
 import { toast } from 'sonner';
 
@@ -44,7 +43,6 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
   const roleByIdQuery = useRoleById(editRoleId || null);
 
   // ✅ Fetch all branches
-  const { data: branchesData, isLoading: branchesLoading } = useBranches();
 
   // Debug logs
   useEffect(() => {
@@ -82,15 +80,16 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
         roleName: role.name ?? '',
         description: role.description ?? '',
         additionalPermissions: parsedAdditionalPermissions,
-        backDays: 0,
-        timeRestrictionEnabled: false,
-        timeFrom: '09:00',
-        timeTo: '18:00',
-        offDay: 'none',
+        backDays: role.backDaysLimit ?? 0,
+        timeRestrictionEnabled: role.timeRestrictionEnabled ?? false,
+        timeFrom: role.timeFrom ?? '09:00',
+        timeTo: role.timeTo ?? '18:00',
+        offDay: role.offDay ?? 'none',
       });
 
       // Update permissions panel state
       handlers.setModulePermissions(parsedModulePermissions);
+      handlers.setBranches(Array.from(new Set(role.branches || [])));
     } else if (!editRoleId) {
       // Reset form when creating new
       setFormData({
@@ -106,6 +105,7 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
 
       // Reset permissions panel state
       handlers.setModulePermissions({});
+      handlers.setBranches([]);
     }
   }, [roleByIdQuery.data, editRoleId, isOpen]);
 
@@ -136,10 +136,20 @@ export function CreateRoleModal({ isOpen, onClose, isDark, editRoleId }: CreateR
       );
 
       // Prepare API payload
+      const uniqueSelectedBranches = Array.from(new Set(permissions.selectedBranches));
       const payload = {
         Role: (formData.roleName ?? '').trim(),
         Description: (formData.description ?? '').trim(),
         Permissions: allPermissions,
+        branches: uniqueSelectedBranches,
+        AdditionalPermissions: Object.entries(formData.additionalPermissions)
+          .filter(([, enabled]) => enabled)
+          .map(([permission]) => permission),
+        BackDaysLimit: formData.backDays,
+        TimeRestrictionEnabled: formData.timeRestrictionEnabled,
+        TimeFrom: formData.timeRestrictionEnabled ? formData.timeFrom : undefined,
+        TimeTo: formData.timeRestrictionEnabled ? formData.timeTo : undefined,
+        OffDay: formData.offDay,
       };
 
       console.log(editRoleId ? 'Updating role:' : 'Creating role:', payload);

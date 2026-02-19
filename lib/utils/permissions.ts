@@ -4,6 +4,11 @@
  */
 
 import { CrudPermission } from '@/lib/hooks/usePermissions';
+import { ADDITIONAL_PERMISSIONS } from '@/lib/constants/permissions';
+
+const ADDITIONAL_PERMISSION_IDS = new Set(
+  ADDITIONAL_PERMISSIONS.map((permission) => permission.id)
+);
 
 /**
  * Transform module permissions to API format
@@ -45,8 +50,8 @@ export const combineAllPermissions = (
 ): string[] => {
   const modulePerms = transformPermissionsToApi(modulePermissions);
   const additionalPerms = transformAdditionalPermissionsToApi(additionalPermissions);
-  
-  return [...modulePerms, ...additionalPerms];
+
+  return Array.from(new Set([...modulePerms, ...additionalPerms]));
 };
 
 /**
@@ -64,6 +69,10 @@ export const parseModulePermissionsFromApi = (
   const modulePermissions: Record<string, CrudPermission> = {};
 
   permissions.forEach((perm) => {
+    if (ADDITIONAL_PERMISSION_IDS.has(perm)) {
+      return;
+    }
+
     // Match pattern: add_moduleName, view_moduleName, etc.
     const match = perm.match(/^(add|view|edit|delete)_(.+)$/);
     
@@ -101,8 +110,8 @@ export const parseAdditionalPermissionsFromApi = (
   const additionalPermissions: Record<string, boolean> = {};
 
   permissions.forEach((perm) => {
-    // If permission doesn't match CRUD pattern, it's an additional permission
-    if (!perm.match(/^(add|view|edit|delete)_/)) {
+    // Known additional permissions must always be treated as additional.
+    if (ADDITIONAL_PERMISSION_IDS.has(perm) || !perm.match(/^(add|view|edit|delete)_/)) {
       additionalPermissions[perm] = true;
     }
   });

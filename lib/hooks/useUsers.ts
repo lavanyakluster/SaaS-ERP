@@ -4,7 +4,17 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, getUserById, createUser, deleteUser, updateUser, CreateUserRequest, UpdateUserRequest } from '@/lib/api/users.api';
+import {
+  getUsers,
+  getUserById,
+  createUser,
+  deleteUser,
+  updateUser,
+  changeEmail,
+  CreateUserRequest,
+  UpdateUserRequest,
+  ChangeEmailRequest,
+} from '@/lib/api/users.api';
 
 /**
  * Hook to fetch all users
@@ -73,6 +83,22 @@ export const useUpdateUser = () => {
     onSuccess: () => {
       // Invalidate and refetch users list
       queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+/**
+ * Hook to change user email
+ */
+export const useChangeEmail = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { userId: string; emailData: ChangeEmailRequest }) =>
+      changeEmail(data.userId, data.emailData),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', variables.userId] });
     },
   });
 };

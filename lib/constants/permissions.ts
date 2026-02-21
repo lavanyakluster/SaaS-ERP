@@ -4,6 +4,7 @@
  */
 
 import { NAVIGATION_MENU } from './navigation';
+import { Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModulePermission {
@@ -22,7 +23,7 @@ export interface ModulePermission {
  * Module permissions derived from NAVIGATION_MENU
  * Automatically syncs with sidebar navigation
  */
-export const MODULE_PERMISSIONS: ModulePermission[] = NAVIGATION_MENU.flatMap((navItem) => {
+const navigationModulePermissions: ModulePermission[] = NAVIGATION_MENU.flatMap((navItem) => {
   const mainMenuId = navItem.label.toLowerCase().replace(/\s+/g, '_');
   
   // Create main menu item
@@ -47,6 +48,19 @@ export const MODULE_PERMISSIONS: ModulePermission[] = NAVIGATION_MENU.flatMap((n
 
   return [mainMenu, ...submenus];
 });
+
+const settingsModulePermission: ModulePermission = {
+  id: 'settings',
+  label: 'Settings',
+  isMainMenu: true,
+  icon: Settings,
+  submenus: [],
+};
+
+export const MODULE_PERMISSIONS: ModulePermission[] = [
+  ...navigationModulePermissions,
+  settingsModulePermission,
+];
 
 /**
  * Additional granular permissions (checkboxes)

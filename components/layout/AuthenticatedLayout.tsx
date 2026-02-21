@@ -21,10 +21,11 @@ interface AuthenticatedLayoutProps {
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const router = useRouter();
-  const { status } = useAuthStore();
+  const { status, user } = useAuthStore();
   const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
 
   // Check if authenticated based on status
   const isAuthenticated = status === 'authenticated';
@@ -59,6 +60,62 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
     }
   }, [isAuthenticated, status, mounted]); // ✅ CRITICAL: Removed 'router' from dependencies to prevent infinite loops
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const isWithinAllowedAccessWindow = useMemo(() => {
+    if (!user?.timeRestrictionEnabled) {
+      return true;
+    }
+
+    const dayName = currentTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const offDay = (user.offDay || '').toLowerCase();
+    if (offDay && offDay !== 'none' && offDay === dayName) {
+      return false;
+    }
+
+    const from = user.timeFrom;
+    const to = user.timeTo;
+    if (!from || !to) {
+      return true;
+    }
+
+    const [fromHour, fromMinute] = from.split(':').map(Number);
+    const [toHour, toMinute] = to.split(':').map(Number);
+    if (
+      Number.isNaN(fromHour) || Number.isNaN(fromMinute) ||
+      Number.isNaN(toHour) || Number.isNaN(toMinute)
+    ) {
+      return true;
+    }
+
+    const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const fromMinutes = fromHour * 60 + fromMinute;
+    const toMinutes = toHour * 60 + toMinute;
+
+    if (fromMinutes <= toMinutes) {
+      return nowMinutes >= fromMinutes && nowMinutes <= toMinutes;
+    }
+
+    // Overnight window (e.g. 22:00 -> 06:00)
+    return nowMinutes >= fromMinutes || nowMinutes <= toMinutes;
+  }, [user?.timeRestrictionEnabled, user?.offDay, user?.timeFrom, user?.timeTo, currentTime]);
+
+  useEffect(() => {
+    if (!mounted || !isAuthenticated) {
+      return;
+    }
+
+    if (!isWithinAllowedAccessWindow) {
+      router.replace('/login');
+    }
+  }, [mounted, isAuthenticated, isWithinAllowedAccessWindow, router]);
+
   // Memoize layout classes
   const layoutClasses = useMemo(
     () =>
@@ -87,6 +144,19 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
           role="status"
           aria-label="Loading"
         />
+      </div>
+    );
+  }
+
+  if (!isWithinAllowedAccessWindow) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-center px-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Access Restricted</h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            You cannot access the system at this time.
+          </p>
+        </div>
       </div>
     );
   }

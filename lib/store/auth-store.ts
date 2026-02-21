@@ -30,6 +30,13 @@ export interface User {
   name: string;
   role: string;
   permissions?: string[];
+  additionalPermissions?: string[];
+  branches?: string[];
+  backDaysLimit?: number;
+  timeRestrictionEnabled?: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  offDay?: string;
 }
 
 export interface Organization {

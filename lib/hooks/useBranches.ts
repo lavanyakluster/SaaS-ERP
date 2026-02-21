@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { getAllBranches, Branch } from '@/lib/api/branch.api';
 import { useAuthStore } from '@/lib/store/auth-store';
 
@@ -29,6 +30,7 @@ export const useBranches = () => {
   const isLoggingOut = useAuthStore(state => state.isLoggingOut);
   const isSwitchingOrganization = useAuthStore(state => state.isSwitchingOrganization);
   const selectedYear = useAuthStore(state => state.selectedYear);
+  const allowedBranchCodes = useAuthStore(state => state.user?.branches || []);
   const isAuthenticated = status === 'authenticated' && !isLoggingOut && !isSwitchingOrganization;
 
   // Debug logging (only in development)
@@ -42,7 +44,7 @@ export const useBranches = () => {
     });
   }
 
-  return useQuery<Branch[], Error>({
+  const query = useQuery<Branch[], Error>({
     queryKey: ['branches', selectedYear], // Include year in key to refetch if it changes
     queryFn: () => getAllBranches(selectedYear || undefined),
     staleTime: 30 * 60 * 1000, // ⚡ 30 minutes - branches rarely change
@@ -53,6 +55,26 @@ export const useBranches = () => {
     refetchOnWindowFocus: false, // ⚡ Don't refetch on window focus
     refetchOnReconnect: false, // ⚡ Don't refetch on reconnect
   });
+
+  const filteredBranches = useMemo(() => {
+    const branches = query.data || [];
+    const sanitizedAllowed = Array.from(
+      new Set((allowedBranchCodes || []).filter((code) => typeof code === 'string' && code.trim().length > 0))
+    );
+
+    // Empty user branch list means unrestricted access to all branches.
+    if (sanitizedAllowed.length === 0) {
+      return branches;
+    }
+
+    const allowedSet = new Set(sanitizedAllowed);
+    return branches.filter((branch) => allowedSet.has(branch.bR_COD));
+  }, [query.data, allowedBranchCodes]);
+
+  return {
+    ...query,
+    data: filteredBranches,
+  };
 };
 
 /**

@@ -61,6 +61,19 @@ const TopNavBar = React.memo(function TopNavBar() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isDark = theme === 'dark';
+  const role = user?.role?.toLowerCase();
+  const isOwnerOrAdmin = role === 'owner' || role === 'admin';
+  const hasSettingsPermission = (user?.permissions || []).some((permission) => {
+    const normalized = permission.toLowerCase();
+    return (
+      normalized === 'settings' ||
+      normalized === 'view_settings' ||
+      normalized === 'add_settings' ||
+      normalized === 'edit_settings' ||
+      normalized === 'delete_settings'
+    );
+  });
+  const canAccessSettings = isOwnerOrAdmin || hasSettingsPermission;
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -300,9 +313,11 @@ const TopNavBar = React.memo(function TopNavBar() {
           </div>
 
           {/* Settings */}
-          <Link href="/settings" className={getButtonClasses()} title="Settings">
-            <Settings className="w-5 h-5" />
-          </Link>
+          {canAccessSettings && (
+            <Link href="/settings" className={getButtonClasses()} title="Settings">
+              <Settings className="w-5 h-5" />
+            </Link>
+          )}
 
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useTheme } from '@/lib/store/theme-store';
@@ -146,11 +146,12 @@ const DEFAULT_SECTION_METADATA = {
 
 function SettingsLayoutContent({ children }: SettingsLayoutProps) {
   const router = useRouter();
-  const { selectedOrganization } = useAuthStore();
+  const { selectedOrganization, user } = useAuthStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { activeCategory, activeSection, setActiveCategory, setActiveSection } = useSettings();
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentTime, setCurrentTime] = useState(() => new Date());
 
   const sectionMeta = SECTION_METADATA[activeSection] || DEFAULT_SECTION_METADATA;
 
@@ -163,6 +164,74 @@ function SettingsLayoutContent({ children }: SettingsLayoutProps) {
     // You can add search filtering logic here
     console.log('Search query:', query);
   };
+
+  const role = user?.role?.toLowerCase();
+  const isOwnerOrAdmin = role === 'owner' || role === 'admin';
+  const hasSettingsPermission = (user?.permissions || []).some((permission) => {
+    const normalized = permission.toLowerCase();
+    return (
+      normalized === 'settings' ||
+      normalized === 'view_settings' ||
+      normalized === 'add_settings' ||
+      normalized === 'edit_settings' ||
+      normalized === 'delete_settings'
+    );
+  });
+  const canAccessSettings = isOwnerOrAdmin || hasSettingsPermission;
+  const isWithinAllowedAccessWindow = useMemo(() => {
+    if (!user?.timeRestrictionEnabled) {
+      return true;
+    }
+
+    const dayName = currentTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const offDay = (user.offDay || '').toLowerCase();
+    if (offDay && offDay !== 'none' && offDay === dayName) {
+      return false;
+    }
+
+    const from = user.timeFrom;
+    const to = user.timeTo;
+    if (!from || !to) {
+      return true;
+    }
+
+    const [fromHour, fromMinute] = from.split(':').map(Number);
+    const [toHour, toMinute] = to.split(':').map(Number);
+    if (
+      Number.isNaN(fromHour) || Number.isNaN(fromMinute) ||
+      Number.isNaN(toHour) || Number.isNaN(toMinute)
+    ) {
+      return true;
+    }
+
+    const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const fromMinutes = fromHour * 60 + fromMinute;
+    const toMinutes = toHour * 60 + toMinute;
+
+    if (fromMinutes <= toMinutes) {
+      return nowMinutes >= fromMinutes && nowMinutes <= toMinutes;
+    }
+
+    return nowMinutes >= fromMinutes || nowMinutes <= toMinutes;
+  }, [user?.timeRestrictionEnabled, user?.offDay, user?.timeFrom, user?.timeTo, currentTime]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!canAccessSettings || !isWithinAllowedAccessWindow) {
+      router.replace('/dashboard');
+    }
+  }, [canAccessSettings, isWithinAllowedAccessWindow, router]);
+
+  if (!canAccessSettings || !isWithinAllowedAccessWindow) {
+    return null;
+  }
 
   return (
     <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>

@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, TrendingUp } from 'lucide-react
 import { NAVIGATION_MENU } from '@/lib/constants/navigation';
 import { useThemeStore } from '@/lib/store/theme-store';
 import { useGradientStore } from '@/lib/store/gradient-store';
+import { useAuthStore } from '@/lib/store/auth-store';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -19,6 +20,60 @@ const Sidebar = React.memo(function Sidebar({ collapsed, onToggle }: SidebarProp
   const { activeGradient } = useGradientStore();
   // ✅ All sections closed by default
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const userRole = useAuthStore((state) => state.user?.role?.toLowerCase() || '');
+  const userPermissions = useAuthStore((state) => state.user?.permissions || []);
+
+  const hasFullAccess = userRole === 'owner' || userRole === 'admin';
+  const normalizedPermissions = useMemo(
+    () => new Set(userPermissions.map((permission) => permission.toLowerCase())),
+    [userPermissions]
+  );
+
+  const hasModuleAccess = useCallback((moduleId: string) => {
+    if (hasFullAccess) return true;
+
+    const normalizedModuleId = moduleId.toLowerCase();
+    if (normalizedPermissions.has(normalizedModuleId)) {
+      return true;
+    }
+
+    return (
+      normalizedPermissions.has(`view_${normalizedModuleId}`) ||
+      normalizedPermissions.has(`add_${normalizedModuleId}`) ||
+      normalizedPermissions.has(`edit_${normalizedModuleId}`) ||
+      normalizedPermissions.has(`delete_${normalizedModuleId}`)
+    );
+  }, [hasFullAccess, normalizedPermissions]);
+
+  const visibleMenu = useMemo(() => {
+    return NAVIGATION_MENU
+      .map((item) => {
+        const mainMenuId = item.label.toLowerCase().replace(/\s+/g, '_');
+        const hasMainAccess = hasModuleAccess(mainMenuId);
+        const visibleChildren = (item.children || []).filter((child) => {
+          const childModuleId = `${mainMenuId}_${child.page}`;
+          return hasModuleAccess(childModuleId) || hasMainAccess;
+        });
+
+        if (item.children && item.children.length > 0) {
+          if (!hasMainAccess && visibleChildren.length === 0) {
+            return null;
+          }
+
+          if (visibleChildren.length === 0 && !item.href) {
+            return null;
+          }
+
+          return {
+            ...item,
+            children: visibleChildren,
+          };
+        }
+
+        return hasMainAccess ? item : null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [hasModuleAccess]);
 
   const toggleSection = useCallback((label: string) => {
     if (collapsed) return;
@@ -77,7 +132,7 @@ const Sidebar = React.memo(function Sidebar({ collapsed, onToggle }: SidebarProp
 
       {/* Navigation */}
       <nav className="px-3 py-6 space-y-1 overflow-y-auto h-full pb-24 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
-        {NAVIGATION_MENU.map((item, index) => (
+        {visibleMenu.map((item, index) => (
           <div key={item.label} className="relative">
             {item.children ? (
               <>

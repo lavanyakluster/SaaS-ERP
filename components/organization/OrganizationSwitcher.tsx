@@ -48,10 +48,25 @@ export function OrganizationSwitcher({ onAddOrganization, className = '' }: Orga
   const { 
     organizations, 
     selectedOrganization,
+    user,
     organizationApiUrl, // ✅ Add this to get the current API URL
     setSelectedOrganization,
     setOrganizations,
   } = useAuthStore();
+
+  const role = user?.role?.toLowerCase();
+  const isOwnerOrAdmin = role === 'owner' || role === 'admin';
+  const hasSettingsPermission = (user?.permissions || []).some((permission) => {
+    const normalized = permission.toLowerCase();
+    return (
+      normalized === 'settings' ||
+      normalized === 'view_settings' ||
+      normalized === 'add_settings' ||
+      normalized === 'edit_settings' ||
+      normalized === 'delete_settings'
+    );
+  });
+  const canAccessSettings = isOwnerOrAdmin || hasSettingsPermission;
 
   // ✅ Fetch organizations from API
   const { data: apiOrganizations, isLoading, error, refetch } = useOrganizations();
@@ -361,6 +376,7 @@ export function OrganizationSwitcher({ onAddOrganization, className = '' }: Orga
                           organization={org}
                           isSelected={org.id === selectedOrganization?.id}
                           isDark={isDark}
+                          canAccessSettings={canAccessSettings}
                           onSelect={handleSwitchOrganization}
                           onSettings={() => {
                             setIsOpen(false);
@@ -389,6 +405,7 @@ export function OrganizationSwitcher({ onAddOrganization, className = '' }: Orga
                           organization={org}
                           isSelected={org.id === selectedOrganization?.id}
                           isDark={isDark}
+                          canAccessSettings={canAccessSettings}
                           onSelect={handleSwitchOrganization}
                           onSettings={() => {
                             setIsOpen(false);
@@ -452,6 +469,7 @@ interface OrganizationItemProps {
   organization: Organization;
   isSelected: boolean;
   isDark: boolean;
+  canAccessSettings: boolean;
   onSelect: (org: Organization) => void;
   onSettings: () => void;
   onUsers: () => void;
@@ -462,6 +480,7 @@ function OrganizationItem({
   organization, 
   isSelected, 
   isDark, 
+  canAccessSettings,
   onSelect, 
   onSettings, 
   onUsers,
@@ -596,21 +615,23 @@ function OrganizationItem({
         {/* Action Buttons - Always Visible */}
         {!isSelected && !isSwitching && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSettings();
-              }}
-              className={`
-                p-2.5 rounded-lg transition-all
-                ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-white hover:bg-gray-100 text-gray-600'}
-                shadow-md hover:shadow-lg border
-                ${isDark ? 'border-gray-600' : 'border-gray-200'}
-              `}
-              title="Organization Settings"
-            >
-              <SettingsIcon className="w-4 h-4" />
-            </button>
+            {canAccessSettings && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSettings();
+                }}
+                className={`
+                  p-2.5 rounded-lg transition-all
+                  ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-white hover:bg-gray-100 text-gray-600'}
+                  shadow-md hover:shadow-lg border
+                  ${isDark ? 'border-gray-600' : 'border-gray-200'}
+                `}
+                title="Organization Settings"
+              >
+                <SettingsIcon className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();

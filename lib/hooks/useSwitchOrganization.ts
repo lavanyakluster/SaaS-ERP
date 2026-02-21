@@ -1,7 +1,7 @@
 /**
  * Switch Organization Hook using React Query
- * 
- * Handles switching between organizations with proper token updates
+ *
+ * Handles switching between organizations with proper token updates.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,114 +10,138 @@ import {
   switchOrganization,
   type SwitchOrganizationResponse,
 } from '@/lib/api';
+import { getUserById } from '@/lib/api/users.api';
+import { MODULE_PERMISSIONS } from '@/lib/constants/permissions';
 import { useAuthStore } from '@/lib/store';
 import { organizationKeys } from './useOrganizations';
 
 interface UseSwitchOrganizationOptions {
   onSuccess?: (data: SwitchOrganizationResponse) => void;
   onError?: (error: any) => void;
-  silent?: boolean; // ✅ NEW: Suppress toast notification
+  silent?: boolean;
 }
 
-/**
- * Hook for switching to a different organization
- * 
- * IMPORTANT: After switching organizations, new tokens are issued with the
- * new organization context embedded. These tokens are automatically stored.
- * 
- * All subsequent API calls will use the new organization context.
- * 
- * @example
- * ```tsx
- * const { mutate: switchOrg, isPending } = useSwitchOrganization({
- *   onSuccess: (data) => {
- *     // Tokens are already updated with new org context
- *     // User permissions updated for new org
- *     router.push('/dashboard');
- *   },
- * });
- * 
- * switchOrg('074be0f8-ad02-4518-a154-487db67af2b2');
- * ```
- */
 export const useSwitchOrganization = (options?: UseSwitchOrganizationOptions) => {
   const queryClient = useQueryClient();
   const updateUser = useAuthStore((state) => state.updateUser);
+  const currentUserId = useAuthStore((state) => state.user?.userId || state.user?.id || null);
   const setSelectedOrganization = useAuthStore((state) => state.setSelectedOrganization);
   const setTokens = useAuthStore((state) => state.setTokens);
-  const setOrganizationApiUrl = useAuthStore((state) => state.setOrganizationApiUrl); // ✅ NEW
-  const setSwitchingOrganization = useAuthStore((state) => state.setSwitchingOrganization); // ✅ NEW
+  const setOrganizationApiUrl = useAuthStore((state) => state.setOrganizationApiUrl);
+  const setSwitchingOrganization = useAuthStore((state) => state.setSwitchingOrganization);
+
+  const mergePermissions = (...permissionSets: Array<string[] | undefined>) =>
+    Array.from(new Set(permissionSets.flatMap((permissions) => permissions || [])));
+  const getFullModulePermissions = (): string[] => {
+    const moduleIds = new Set<string>([
+      ...MODULE_PERMISSIONS.map((module) => module.id),
+      'settings',
+    ]);
+
+    return Array.from(moduleIds).flatMap((moduleId) => [
+      `add_${moduleId}`,
+      `view_${moduleId}`,
+      `edit_${moduleId}`,
+      `delete_${moduleId}`,
+    ]);
+  };
 
   return useMutation({
     mutationFn: (organizationId: string) => {
-      // ✅ CRITICAL: Set switching flag to prevent API calls during org switch
       setSwitchingOrganization(true);
-      console.log('🔄 Switching to organization:', organizationId);
-      console.log('🚫 Blocking all organization-dependent API calls during switch...');
-      console.log('📝 Current access token preview:', sessionStorage.getItem('sb_access_token')?.substring(0, 50) + '...');
-      console.log('📝 Current refresh token available:', !!sessionStorage.getItem('sb_refresh_token'));
       return switchOrganization(organizationId);
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       const { organization, user_context, tokens } = response.data;
 
-      console.log('✅ Switch organization API response received');
-      console.log('  - Organization:', organization.name);
-      console.log('  - Organization ID:', organization.id);
-      console.log('  - Currency:', organization.currency);
-      console.log('  - Timezone:', organization.timezone);
-      console.log('  - Status:', organization.status);
-      console.log('  - API URL:', organization.api_url || 'Not provided');
-      console.log('  - New access token received:', !!tokens.access_token);
-      console.log('  - New refresh token received:', !!tokens.refresh_token);
-      console.log('  - Expires in:', tokens.expires_in, 'seconds');
-
-      // Update auth tokens with new organization context
-      // ✅ IMPORTANT: Pass all three parameters (access_token, refresh_token, expires_in)
       setTokens(tokens.access_token, tokens.refresh_token, tokens.expires_in);
-      console.log('✅ New tokens stored in sessionStorage');
 
-      // Create organization object matching the store interface
-      const switchedOrganization = {
+      setSelectedOrganization({
         id: organization.id,
         name: organization.name,
         displayName: organization.name,
         isActive: organization.status === 'ACTIVE',
         createdAt: organization.created_at,
-      };
-
-      // Set as selected organization
-      setSelectedOrganization(switchedOrganization);
-
-      // ✅ CRITICAL: Store organization-specific API URL if provided
-      if (organization.api_url) {
-        setOrganizationApiUrl(organization.api_url);
-        console.log('🌐 Organization API URL stored:', organization.api_url);
-      } else {
-        setOrganizationApiUrl(null);
-        console.log('🌐 No organization API URL provided, using default');
-      }
-
-      // Update user with permissions and role for new organization
-      updateUser({
-        role: user_context.role.name.toLowerCase(),
-        permissions: user_context.permissions || [],
       });
 
-      // Invalidate organizations query to refresh the list
-      queryClient.invalidateQueries({ queryKey: organizationKeys.lists() });
-      // Also invalidate individual organization queries
-      queryClient.invalidateQueries({ queryKey: ['organization'] }); // Individual org queries
-      queryClient.invalidateQueries({ queryKey: ['organizations'] }); // Alternative org list key
+      if (organization.api_url) {
+        setOrganizationApiUrl(organization.api_url);
+      } else {
+        setOrganizationApiUrl(null);
+      }
 
-      // CRITICAL: Invalidate ALL organization-dependent queries
-      // This ensures all API calls refetch with the new organization context
-      queryClient.invalidateQueries({ queryKey: ['profit-loss'] }); // Dashboard profit/loss
-      queryClient.invalidateQueries({ queryKey: ['branches'] }); // Branches
-      queryClient.invalidateQueries({ queryKey: ['users'] }); // Users & Access
-      queryClient.invalidateQueries({ queryKey: ['roles'] }); // Roles & Permissions
-      
-      console.log('🔄 All organization-dependent queries invalidated - Dashboard will refetch with new org context');
+      const resolvedRole = (
+        user_context.role?.name ||
+        (user_context.is_owner ? 'owner' : 'user')
+      ).toLowerCase();
+      const hasFullAccess = user_context.is_owner || resolvedRole === 'admin' || resolvedRole === 'owner';
+
+      const resolvedUserId = user_context.user_id || currentUserId;
+      const additionalPermissions = user_context.additional_permissions || [];
+      let effectivePermissions = mergePermissions(
+        user_context.permissions || [],
+        additionalPermissions
+      );
+      let userBranches: string[] = user_context.branch_codes || [];
+      let userRestrictionSettings: {
+        backDaysLimit?: number;
+        timeRestrictionEnabled?: boolean;
+        timeFrom?: string;
+        timeTo?: string;
+        offDay?: string;
+      } = {};
+
+      if (resolvedUserId) {
+        try {
+          const userDetails = await getUserById(resolvedUserId);
+          const allowPermissions = userDetails.permissions?.allow || [];
+          const denyPermissions = new Set(userDetails.permissions?.deny || []);
+          const filteredAllowPermissions = allowPermissions.filter(
+            (permission) => !denyPermissions.has(permission)
+          );
+
+          effectivePermissions = mergePermissions(
+            filteredAllowPermissions,
+            additionalPermissions
+          );
+          userBranches = userDetails.branches || userDetails.Branches || [];
+          userRestrictionSettings = {
+            backDaysLimit: userDetails.backDaysLimit,
+            timeRestrictionEnabled: userDetails.timeRestrictionEnabled,
+            timeFrom: userDetails.timeFrom,
+            timeTo: userDetails.timeTo,
+            offDay: userDetails.offDay,
+          };
+        } catch (detailsError) {
+          console.warn('Could not load user-by-id details after org switch:', detailsError);
+        }
+      } else {
+        console.warn('Could not resolve user id for user-by-id sync after org switch.');
+      }
+
+      if (hasFullAccess) {
+        effectivePermissions = mergePermissions(
+          getFullModulePermissions(),
+          effectivePermissions,
+          additionalPermissions
+        );
+      }
+
+      updateUser({
+        role: resolvedRole,
+        permissions: effectivePermissions,
+        additionalPermissions,
+        branches: userBranches,
+        ...userRestrictionSettings,
+      });
+
+      queryClient.invalidateQueries({ queryKey: organizationKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['profit-loss'] });
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
 
       if (!options?.silent) {
         toast.success('Organization Switched!', {
@@ -125,21 +149,12 @@ export const useSwitchOrganization = (options?: UseSwitchOrganizationOptions) =>
         });
       }
 
-      console.log('✅ Switched to organization:', organization.name);
-      console.log('👤 New role:', user_context.role.name);
-      console.log('🔐 New permissions:', user_context.permissions);
-
-      // ✅ CRITICAL: Clear switching flag to allow API calls again
       setSwitchingOrganization(false);
-      console.log('✅ Organization switch complete - API calls re-enabled');
-
       options?.onSuccess?.(response);
     },
     onError: (error: any) => {
-      // ✅ CRITICAL: Clear switching flag on error to allow API calls again
       setSwitchingOrganization(false);
-      console.log('❌ Organization switch failed - API calls re-enabled');
-      
+
       const message =
         error.response?.data?.message || error.message || 'Failed to switch organization';
 
@@ -150,7 +165,7 @@ export const useSwitchOrganization = (options?: UseSwitchOrganizationOptions) =>
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.error('❌ Switch organization error:', error);
+        console.error('Switch organization error:', error);
       }
 
       options?.onError?.(error);

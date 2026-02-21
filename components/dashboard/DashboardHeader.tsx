@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Building2, ChevronDown, Search, Check, LayoutDashboard, TrendingUp, Wallet, Package, Target, Download, RefreshCw, Award, BarChart2 } from 'lucide-react';
 import type { Branch } from '@/lib/api';
 import { DateRangeFilterWrapper } from './DateRangeFilterWrapper';
+import { useAuthStore } from '@/lib/store/auth-store';
 
 type DashboardType = 'overview' | 'sales' | 'account' | 'item' | 'sales-kpi' | 'loyalty' | 'sales-target';
 
@@ -68,6 +69,47 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [branchSearchQuery, setBranchSearchQuery] = useState('');
+  const role = useAuthStore((state) => state.user?.role?.toLowerCase() || '');
+  const permissions = useAuthStore((state) => state.user?.permissions || []);
+
+  const hasFullAccess = role === 'owner' || role === 'admin';
+  const normalizedPermissions = useMemo(
+    () => new Set(permissions.map((permission) => permission.toLowerCase())),
+    [permissions]
+  );
+  const hasModuleAccess = (moduleId: string) => {
+    if (hasFullAccess) return true;
+
+    const normalizedModuleId = moduleId.toLowerCase();
+    if (normalizedPermissions.has(normalizedModuleId)) {
+      return true;
+    }
+
+    return (
+      normalizedPermissions.has(`view_${normalizedModuleId}`) ||
+      normalizedPermissions.has(`add_${normalizedModuleId}`) ||
+      normalizedPermissions.has(`edit_${normalizedModuleId}`) ||
+      normalizedPermissions.has(`delete_${normalizedModuleId}`)
+    );
+  };
+
+  const visibleDashboardTabs = useMemo(() => {
+    return DASHBOARD_TABS.filter((tab) => {
+      const tabModuleId = `dashboard_${tab.id}`;
+      return hasModuleAccess('dashboard') || hasModuleAccess(tabModuleId);
+    });
+  }, [hasFullAccess, normalizedPermissions]);
+
+  useEffect(() => {
+    if (visibleDashboardTabs.length === 0) {
+      return;
+    }
+
+    const hasActiveTabAccess = visibleDashboardTabs.some((tab) => tab.id === activeDashboard);
+    if (!hasActiveTabAccess) {
+      onDashboardChange(visibleDashboardTabs[0].id);
+    }
+  }, [visibleDashboardTabs, activeDashboard, onDashboardChange]);
 
   // Filter branches based on search query
   const filteredBranches = branches.filter(branch =>
@@ -282,7 +324,7 @@ export function DashboardHeader({
         {/* Bottom Row - Dashboard Tabs */}
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5">
-            {DASHBOARD_TABS.map((tab) => {
+            {visibleDashboardTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeDashboard === tab.id;
               

@@ -103,6 +103,8 @@ export interface UserContext {
   user_id: string;
   role: UserRole;
   permissions: string[];
+  additional_permissions?: string[];
+  branch_codes?: string[];
   is_owner: boolean;
 }
 

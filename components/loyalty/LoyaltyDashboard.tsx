@@ -1,752 +1,342 @@
 'use client';
 
 import { useMemo } from 'react';
-import { 
-  Users, UserX, TrendingUp, Gift, Star, Award, 
-  DollarSign, BarChart3, Trophy, Sparkles, Crown,
-  ShoppingBag, ArrowUpRight, ArrowDownRight, Target
-} from 'lucide-react';
-import { motion } from 'motion/react';
+import { Users, Gift, BadgePercent, Wallet, ShoppingBag, Trophy } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useTheme } from '@/lib/store/theme-store';
 import { useLoyaltyDashboard } from '@/lib/hooks/useLoyaltyDashboard';
-import {
-  calculateDashboardMetrics,
-  getTopLoyalCustomers,
-  generateMonthlyTrend,
-  calculateTransactionSummary,
-  calculateRewardAnalysis,
-  getTierDistribution,
-  type TopLoyalCustomer,
-} from '@/lib/api/loyalty.api';
-
-interface MetricCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ElementType;
-  color: string;
-  delay?: number;
-}
-
-const MetricCard = ({ title, value, icon: Icon, color, delay = 0 }: MetricCardProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
-      className={`rounded-lg border p-4 ${
-        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200 shadow-sm'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <p className={`font-sans text-xs font-medium ${
-          isDark ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          {title}
-        </p>
-        <div className={`p-2 rounded-lg ${color}`}>
-          <Icon className="w-4 h-4 text-white" />
-        </div>
-      </div>
-      <motion.p 
-        initial={{ scale: 0.5 }}
-        animate={{ scale: 1 }}
-        transition={{ duration: 0.5, delay: delay + 0.2 }}
-        className={`font-sans text-2xl font-bold ${
-          isDark ? 'text-white' : 'text-gray-900'
-        }`}
-      >
-        {value}
-      </motion.p>
-    </motion.div>
-  );
-};
-
-const formatNumber = (value: number): string => {
-  if (value == null || isNaN(value)) return '0';
-  return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
-};
-
-const formatPercentage = (value: number): string => {
-  if (value == null || isNaN(value)) return '0%';
-  return `${value.toFixed(1)}%`;
-};
+import { DataTable } from '@/components/ui/data-table';
+import type { LoyaltyMember } from '@/lib/api/loyalty.api';
 
 interface LoyaltyDashboardProps {
   dateFrom?: string;
   dateTo?: string;
 }
 
+const formatNumber = (value: number) =>
+  value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+const formatMoney = (value: number) =>
+  value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const TIER_COLOR_MAP: Record<string, string> = {
+  platinum: '#8b5cf6',
+  gold: '#f59e0b',
+  silver: '#94a3b8',
+  bronze: '#b45309',
+  standard: '#0ea5e9',
+  unassigned: '#6b7280',
+};
+
+const TIER_ORDER: Record<string, number> = {
+  platinum: 1,
+  gold: 2,
+  silver: 3,
+  bronze: 4,
+  standard: 5,
+  unassigned: 6,
+};
+
 export function LoyaltyDashboard({ dateFrom, dateTo }: LoyaltyDashboardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  
-  // Use props if provided, otherwise fall back to current year defaults
-  const currentYear = new Date().getFullYear();
-  const defaultDateFrom = `${currentYear}-01-01`;
-  const defaultDateTo = `${currentYear}-12-31`;
-  
-  const effectiveDateFrom = dateFrom || defaultDateFrom;
-  const effectiveDateTo = dateTo || defaultDateTo;
-  
-  const { data: rawData, isLoading, error } = useLoyaltyDashboard({
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const effectiveDateFrom = dateFrom || `${currentYear}-01-01`;
+  const effectiveDateTo = dateTo || `${currentYear}-12-31`;
+
+  const { data = [], isLoading, error } = useLoyaltyDashboard({
     dateFrom: effectiveDateFrom,
-    dateTo: effectiveDateTo
+    dateTo: effectiveDateTo,
   });
 
   const metrics = useMemo(() => {
-    if (!rawData?.length) return null;
-    return calculateDashboardMetrics(rawData);
-  }, [rawData]);
+    const totalMembers = data.length;
+    const totalSales = data.reduce((sum, m) => sum + (m.TotalSales || 0), 0);
+    const totalEarned = data.reduce((sum, m) => sum + (m.PointsEarned || 0), 0);
+    const totalRedeemed = data.reduce((sum, m) => sum + (m.PointsRedeemed || 0), 0);
+    const totalBalance = data.reduce((sum, m) => sum + (m.BalancePoints || 0), 0);
+    const totalTransactions = data.reduce((sum, m) => sum + (m.SalesCount || 0), 0);
+    const redemptionRate = totalEarned > 0 ? (totalRedeemed / totalEarned) * 100 : 0;
+    const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+
+    return {
+      totalMembers,
+      totalSales,
+      totalEarned,
+      totalRedeemed,
+      totalBalance,
+      redemptionRate,
+      avgTransactionValue,
+    };
+  }, [data]);
 
   const topCustomers = useMemo(() => {
-    if (!rawData?.length) return [];
-    return getTopLoyalCustomers(rawData, 10);
-  }, [rawData]);
+    return [...data]
+      .sort((a, b) => (b.TotalSales || 0) - (a.TotalSales || 0))
+      .slice(0, 10);
+  }, [data]);
 
-  const monthlyTrend = useMemo(() => {
-    if (!rawData?.length) return [];
-    return generateMonthlyTrend(rawData);
-  }, [rawData]);
-
-  const transactionSummary = useMemo(() => {
-    if (!rawData?.length) return null;
-    return calculateTransactionSummary(rawData);
-  }, [rawData]);
-
-  const rewardAnalysis = useMemo(() => {
-    if (!rawData?.length) return null;
-    return calculateRewardAnalysis(rawData);
-  }, [rawData]);
+  const branchSales = useMemo(() => {
+    const map = new Map<string, number>();
+    data.forEach((item) => {
+      const key = item.Branch?.trim() || 'Unknown';
+      map.set(key, (map.get(key) || 0) + (item.TotalSales || 0));
+    });
+    return [...map.entries()]
+      .map(([branch, total]) => ({ branch, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8);
+  }, [data]);
 
   const tierDistribution = useMemo(() => {
-    if (!rawData?.length) return [];
-    return getTierDistribution(rawData);
-  }, [rawData]);
+    const map = new Map<string, number>();
+    data.forEach((item) => {
+      const key = item.Tier?.trim() || 'Unassigned';
+      map.set(key, (map.get(key) || 0) + 1);
+    });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Users className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading loyalty data...</p>
-        </div>
-      </div>
-    );
-  }
+    const total = data.length;
+    return [...map.entries()]
+      .map(([tier, count]) => ({
+        tier,
+        count,
+        percentage: total > 0 ? (count / total) * 100 : 0,
+        color: TIER_COLOR_MAP[tier.toLowerCase()] || '#0ea5e9',
+      }))
+      .sort((a, b) => {
+        const rankA = TIER_ORDER[a.tier.toLowerCase()] || 999;
+        const rankB = TIER_ORDER[b.tier.toLowerCase()] || 999;
+        if (rankA !== rankB) return rankA - rankB;
+        return b.count - a.count;
+      });
+  }, [data]);
 
-  if (error || !metrics) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <UserX className="w-8 h-8 mx-auto mb-2 text-red-600" />
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Failed to load loyalty data</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ECharts colors based on theme
-  const chartColors = {
-    primary: '#3b82f6',
-    textColor: isDark ? '#9ca3af' : '#374151',
-    gridColor: isDark ? '#374151' : '#e5e7eb',
-    backgroundColor: isDark ? '#1f2937' : '#ffffff',
-    donutColors: ['#94a3b8', '#eab308', '#d97706'], // Gray, Gold, Bronze
-  };
-
-  // Monthly Trend Chart (Points Earned Line Chart)
-  const monthlyTrendOption: EChartsOption = {
+  const branchChartOption: EChartsOption = {
     backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: chartColors.backgroundColor,
-      borderColor: chartColors.gridColor,
-      borderWidth: 1,
-      textStyle: {
-        color: chartColors.textColor,
-      },
-    },
-    grid: {
-      left: '60px',
-      right: '4%',
-      bottom: '12%',
-      top: '8%',
-      containLabel: false,
-    },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 56, right: 16, top: 12, bottom: 34 },
     xAxis: {
       type: 'category',
-      data: monthlyTrend.map(d => d.month),
-      axisLine: {
-        lineStyle: {
-          color: chartColors.gridColor,
-        },
-      },
-      axisLabel: {
-        color: chartColors.textColor,
-        fontSize: 11,
-      },
+      data: branchSales.map((b) => b.branch),
+      axisLabel: { rotate: 25, color: isDark ? '#9ca3af' : '#4b5563' },
     },
     yAxis: {
       type: 'value',
-      axisLine: {
-        show: false,
-      },
-      axisLabel: {
-        color: chartColors.textColor,
-        fontSize: 11,
-      },
-      splitLine: {
-        lineStyle: {
-          color: chartColors.gridColor,
-          type: 'dashed',
-        },
-      },
+      axisLabel: { color: isDark ? '#9ca3af' : '#4b5563' },
+      splitLine: { lineStyle: { color: isDark ? '#374151' : '#e5e7eb', type: 'dashed' } },
     },
     series: [
       {
-        name: 'Points Earned',
-        type: 'line',
-        data: monthlyTrend.map(d => d.pointsEarned),
-        smooth: true,
-        lineStyle: {
-          color: chartColors.primary,
-          width: 2,
-        },
+        type: 'bar',
+        data: branchSales.map((b) => b.total),
         itemStyle: {
-          color: chartColors.primary,
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: '#0ea5e9' },
+              { offset: 1, color: '#2563eb' },
+            ],
+          },
+          borderRadius: [6, 6, 0, 0],
         },
-        symbol: 'circle',
-        symbolSize: 6,
+        barWidth: 28,
       },
     ],
   };
 
-  // Member Segmentation Donut Chart
-  const memberSegmentationOption: EChartsOption = {
+  const tierChartOption: EChartsOption = {
     backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: chartColors.backgroundColor,
-      borderColor: chartColors.gridColor,
-      borderWidth: 1,
-      textStyle: {
-        color: chartColors.textColor,
-      },
-      formatter: '{b}: {c} ({d}%)',
-    },
-    legend: {
-      show: false,
-    },
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     series: [
       {
-        name: 'Member Tier',
         type: 'pie',
-        radius: ['50%', '75%'],
-        center: ['50%', '50%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 6,
-          borderColor: isDark ? '#1f2937' : '#ffffff',
-          borderWidth: 2,
-        },
-        label: {
-          show: true,
-          position: 'outside',
-          fontSize: 10,
-          color: chartColors.textColor,
-          formatter: '{b}\n{d}%',
-        },
+        radius: ['48%', '74%'],
+        label: { show: false },
         emphasis: {
           label: {
             show: true,
-            fontSize: 12,
+            color: isDark ? '#f3f4f6' : '#111827',
+            formatter: '{b}\n{d}%',
             fontWeight: 'bold',
-            color: chartColors.textColor,
           },
         },
-        labelLine: {
-          show: true,
-          length: 10,
-          length2: 5,
-        },
-        data: tierDistribution.slice(0, 5).map((tier, index) => ({
-          value: tier.count,
-          name: tier.tier,
+        data: tierDistribution.map((t) => ({
+          name: t.tier,
+          value: t.count,
           itemStyle: {
-            color: chartColors.donutColors[index % chartColors.donutColors.length],
+            color: t.color,
           },
         })),
       },
     ],
   };
 
-  return (
-    <div className="space-y-3">
-      {/* Overview Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={`rounded-lg overflow-hidden ${
-          isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-sm'
-        }`}
-      >
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className={`w-5 h-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
-            <h3 className={`font-sans text-sm font-bold ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}>
-              Overview Metrics
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <MetricCard
-              title="Total Active Members"
-              value={formatNumber(metrics.totalActiveMembers)}
-              icon={Users}
-              color="bg-blue-500"
-              delay={0}
-            />
-            <MetricCard
-              title="New Member (This Month)"
-              value={formatNumber(metrics.newMembersThisMonth)}
-              icon={TrendingUp}
-              color="bg-green-500"
-              delay={0.1}
-            />
-            <MetricCard
-              title="Inactive Members"
-              value={formatNumber(metrics.inactiveMembers)}
-              icon={UserX}
-              color="bg-red-500"
-              delay={0.2}
-            />
-            <MetricCard
-              title="Total Points Issued"
-              value={formatNumber(metrics.totalPointsIssued)}
-              icon={Gift}
-              color="bg-purple-500"
-              delay={0.3}
-            />
-            <MetricCard
-              title="Total Points Redeemed"
-              value={formatNumber(metrics.totalPointsRedeemed)}
-              icon={Award}
-              color="bg-yellow-500"
-              delay={0.4}
-            />
-            <MetricCard
-              title="Total Points Expired"
-              value={formatNumber(metrics.totalPointsExpired)}
-              icon={Star}
-              color="bg-gray-500"
-              delay={0.5}
-            />
-            <MetricCard
-              title="Redemption Rate"
-              value={formatPercentage(metrics.redemptionRate)}
-              icon={DollarSign}
-              color="bg-pink-500"
-              delay={0.6}
-            />
-            <MetricCard
-              title="Average Points per Member"
-              value={formatNumber(metrics.averagePointsPerMember)}
-              icon={BarChart3}
-              color="bg-indigo-500"
-              delay={0.7}
-            />
+  const topCustomerColumns: ColumnDef<LoyaltyMember>[] = [
+    {
+      accessorKey: 'CustomerName',
+      header: 'Customer',
+      cell: ({ row }) => (
+        <div className="text-sm">
+          <div className="font-semibold">{row.original.CustomerName || 'Unknown'}</div>
+          <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {row.original.CustomerCode || 'N/A'}
           </div>
         </div>
-      </motion.div>
+      ),
+    },
+    {
+      accessorKey: 'Branch',
+      header: 'Branch',
+      cell: ({ getValue }) => <span className="text-sm">{String(getValue() || 'N/A')}</span>,
+    },
+    {
+      accessorKey: 'PointsEarned',
+      header: 'Points Earned',
+      cell: ({ getValue }) => (
+        <div className="text-right text-sm font-semibold text-blue-600 dark:text-blue-400">
+          {formatNumber(Number(getValue() || 0))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'PointsRedeemed',
+      header: 'Points Redeemed',
+      cell: ({ getValue }) => (
+        <div className="text-right text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+          {formatNumber(Number(getValue() || 0))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'TotalSales',
+      header: 'Total Sales',
+      cell: ({ getValue }) => (
+        <div className="text-right text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+          {formatMoney(Number(getValue() || 0))}
+        </div>
+      ),
+    },
+  ];
 
-      {/* 3-Column Grid: Member Insights, Transaction Summary, Reward Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Member Insights */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className={`rounded-lg overflow-hidden ${
-            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-sm'
-          }`}
-        >
-          <div className="p-4 space-y-3">
-            {/* Top 10 Loyal Customers */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className={`w-4 h-4 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
-                <h4 className={`font-sans text-xs font-semibold ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Top 10 Loyal Customers
-                </h4>
-              </div>
-              <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
-                {topCustomers.map((customer, index) => (
-                  <motion.div 
-                    key={customer.rank}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    whileHover={{ x: 4, transition: { duration: 0.2 } }}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {index < 3 && (
-                        <Trophy className={`w-4 h-4 flex-shrink-0 ${
-                          index === 0 ? 'text-yellow-500' : 
-                          index === 1 ? 'text-gray-400' : 
-                          'text-orange-600'
-                        }`} />
-                      )}
-                      <span className={`text-sm font-medium truncate ${
-                        isDark ? 'text-blue-400' : 'text-blue-600'
-                      }`}>
-                        {customer.name}
-                      </span>
-                    </div>
-                    <span className={`text-sm font-bold ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {formatNumber(customer.pointsEarned)}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading loyalty dashboard...</div>
+      </div>
+    );
+  }
 
-            {/* Member Segmentation */}
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Target className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                <h4 className={`font-sans text-xs font-semibold ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Member Segmentation
-                </h4>
-              </div>
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-                style={{ height: '200px' }}
-              >
-                <ReactECharts
-                  option={memberSegmentationOption}
-                  style={{ height: '100%' }}
-                  theme={isDark ? 'dark' : undefined}
-                />
-              </motion.div>
-            </div>
+  if (error) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <p className="font-semibold text-red-600">Failed to load loyalty dashboard</p>
+          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className={`rounded-lg border p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-blue-200 bg-blue-50'}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <span className={`text-xs font-medium ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>Members</span>
+            <Users className={`h-4 w-4 ${isDark ? 'text-blue-300' : 'text-blue-700'}`} />
           </div>
-        </motion.div>
+          <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatNumber(metrics.totalMembers)}</div>
+        </div>
 
-        {/* Transaction Summary */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className={`rounded-lg overflow-hidden ${
-            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-sm'
-          }`}
-        >
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ShoppingBag className={`w-4 h-4 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
-              <h4 className={`font-sans text-xs font-semibold ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
-              }`}>
-                Transaction Summary
-              </h4>
-            </div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.5 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Total Sales Linked
-                </span>
-                <DollarSign className="w-4 h-4 text-green-500" />
-              </div>
-              <p className={`text-xl font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
-                {formatNumber(transactionSummary?.totalSalesLinked || 0)}
-              </p>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.6 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Percentage of Loyalty Sales
-                </span>
-                <TrendingUp className="w-4 h-4 text-blue-500" />
-              </div>
-              <p className={`text-xl font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
-                {formatPercentage(transactionSummary?.percentageOfLoyaltySales || 0)}
-              </p>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.7 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Points Expiry Tracker
-                </span>
-                <Star className="w-4 h-4 text-amber-500" />
-              </div>
-              <p className={`text-xl font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
-                {formatNumber(transactionSummary?.pointsExpiryTracker || 0)}
-              </p>
-            </motion.div>
+        <div className={`rounded-lg border p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-emerald-200 bg-emerald-50'}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <span className={`text-xs font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Total Sales</span>
+            <ShoppingBag className={`h-4 w-4 ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`} />
           </div>
-        </motion.div>
+          <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatMoney(metrics.totalSales)}</div>
+        </div>
 
-        {/* Reward Analysis */}
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className={`rounded-lg overflow-hidden ${
-            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-sm'
-          }`}
-        >
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Gift className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
-              <h4 className={`font-sans text-xs font-semibold ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
-              }`}>
-                Reward Analysis
-              </h4>
-            </div>
-
-            {/* Horizontal Bar for Reward X */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.6 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                }`}>
-                  Reward X
-                </span>
-                <span className={`text-xs font-bold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {rewardAnalysis?.rewardXPercentage || 0}%
-                </span>
-              </div>
-              <div className={`w-full h-2 rounded-full ${
-                isDark ? 'bg-gray-700' : 'bg-gray-200'
-              }`}>
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${rewardAnalysis?.rewardXPercentage || 0}%` }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                  className="h-2 rounded-full bg-blue-600"
-                ></motion.div>
-              </div>
-            </motion.div>
-
-            {/* Horizontal Bar for Reward Y */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.7 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                }`}>
-                  Reward Y
-                </span>
-                <span className={`text-xs font-bold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {rewardAnalysis?.rewardYPercentage || 0}%
-                </span>
-              </div>
-              <div className={`w-full h-2 rounded-full ${
-                isDark ? 'bg-gray-700' : 'bg-gray-200'
-              }`}>
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${rewardAnalysis?.rewardYPercentage || 0}%` }}
-                  transition={{ duration: 0.8, delay: 0.9 }}
-                  className="h-2 rounded-full bg-blue-600"
-                ></motion.div>
-              </div>
-            </motion.div>
-
-            {/* Horizontal Bar for Reward Z */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.8 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                }`}>
-                  Reward Z
-                </span>
-                <span className={`text-xs font-bold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {rewardAnalysis?.rewardZPercentage || 0}%
-                </span>
-              </div>
-              <div className={`w-full h-2 rounded-full ${
-                isDark ? 'bg-gray-700' : 'bg-gray-200'
-              }`}>
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${rewardAnalysis?.rewardZPercentage || 0}%` }}
-                  transition={{ duration: 0.8, delay: 1.0 }}
-                  className="h-2 rounded-full bg-blue-600"
-                ></motion.div>
-              </div>
-            </motion.div>
-
-            {/* Reward Cost vs Redemption Value */}
-            <div className="space-y-3">
-              <h4 className={`font-sans text-xs font-semibold ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
-              }`}>
-                Reward Cost vs Redemption Value
-              </h4>
-              
-              {/* Reward Cost Bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.9 }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-medium ${
-                    isDark ? 'text-blue-400' : 'text-blue-600'
-                  }`}>
-                    Reward Cost
-                  </span>
-                  <span className={`text-xs font-bold ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {formatNumber(rewardAnalysis?.rewardCost || 0)}
-                  </span>
-                </div>
-                <div className={`w-full h-2 rounded-full ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-200'
-                }`}>
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ 
-                      width: `${Math.min(100, ((rewardAnalysis?.rewardCost || 0) / Math.max(rewardAnalysis?.rewardCost || 1, rewardAnalysis?.redemptionValue || 1)) * 100)}%` 
-                    }}
-                    transition={{ duration: 0.8, delay: 1.1 }}
-                    className="h-2 rounded-full bg-blue-600"
-                  ></motion.div>
-                </div>
-              </motion.div>
-
-              {/* Redemption Value Bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 1.0 }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-medium ${
-                    isDark ? 'text-blue-400' : 'text-blue-600'
-                  }`}>
-                    Redemption Value
-                  </span>
-                  <span className={`text-xs font-bold ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {formatNumber(rewardAnalysis?.redemptionValue || 0)}
-                  </span>
-                </div>
-                <div className={`w-full h-2 rounded-full ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-200'
-                }`}>
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ 
-                      width: `${Math.min(100, ((rewardAnalysis?.redemptionValue || 0) / Math.max(rewardAnalysis?.rewardCost || 1, rewardAnalysis?.redemptionValue || 1)) * 100)}%` 
-                    }}
-                    transition={{ duration: 0.8, delay: 1.2 }}
-                    className="h-2 rounded-full bg-blue-600"
-                  ></motion.div>
-                </div>
-              </motion.div>
-            </div>
+        <div className={`rounded-lg border p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-amber-200 bg-amber-50'}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <span className={`text-xs font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Points Issued</span>
+            <Gift className={`h-4 w-4 ${isDark ? 'text-amber-300' : 'text-amber-700'}`} />
           </div>
-        </motion.div>
+          <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatNumber(metrics.totalEarned)}</div>
+        </div>
+
+        <div className={`rounded-lg border p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-purple-200 bg-purple-50'}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <span className={`text-xs font-medium ${isDark ? 'text-purple-300' : 'text-purple-700'}`}>Redemption Rate</span>
+            <BadgePercent className={`h-4 w-4 ${isDark ? 'text-purple-300' : 'text-purple-700'}`} />
+          </div>
+          <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{metrics.redemptionRate.toFixed(2)}%</div>
+        </div>
       </div>
 
-      {/* Trends & Graphs Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        className={`rounded-lg overflow-hidden ${
-          isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-sm'
-        }`}
-      >
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-            <h4 className={`font-sans text-xs font-semibold ${
-              isDark ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              Monthly Trend (Points Earned)
-            </h4>
-          </div>
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            style={{ height: '280px' }}
-          >
-            <ReactECharts
-              option={monthlyTrendOption}
-              style={{ height: '100%' }}
-              theme={isDark ? 'dark' : undefined}
-            />
-          </motion.div>
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+        <div className={`self-start rounded-lg border p-4 xl:col-span-2 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+          <h3 className={`mb-2 text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Branch-wise Loyalty Sales</h3>
+          <ReactECharts option={branchChartOption} style={{ height: 630 }} theme={isDark ? 'dark' : undefined} />
         </div>
-      </motion.div>
+
+        <div className={`rounded-lg border p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+          <h3 className={`mb-2 text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Tier Distribution</h3>
+          <ReactECharts option={tierChartOption} style={{ height: 300 }} theme={isDark ? 'dark' : undefined} />
+          <div className="mt-2 grid grid-cols-1 gap-1.5">
+            {tierDistribution.map((tier) => (
+              <div key={tier.tier} className="flex items-center justify-between text-xs">
+                <div className="inline-flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: tier.color }}
+                  />
+                  <span className={isDark ? 'text-gray-200' : 'text-gray-700'}>{tier.tier}</span>
+                </div>
+                <div className={isDark ? 'text-gray-300' : 'text-gray-600'}>
+                  {formatNumber(tier.count)} ({tier.percentage.toFixed(1)}%)
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className={`rounded-lg border p-4 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <span className="inline-flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-yellow-500" />
+              Top 10 Loyalty Customers
+            </span>
+          </h3>
+          <div className={`inline-flex items-center gap-4 text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <span className="inline-flex items-center gap-1">
+              <Wallet className="h-3.5 w-3.5" />
+              Balance: {formatNumber(metrics.totalBalance)}
+            </span>
+            <span>Avg Ticket: {formatMoney(metrics.avgTransactionValue)}</span>
+          </div>
+        </div>
+        <DataTable
+          data={topCustomers}
+          columns={topCustomerColumns}
+          isDark={isDark}
+          enableFiltering
+          enableGlobalFilter
+          enableSorting
+          enablePagination
+          pageSize={10}
+          height="520px"
+        />
+      </div>
     </div>
   );
 }

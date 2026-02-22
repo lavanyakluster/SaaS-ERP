@@ -69,6 +69,29 @@ export interface TransactionSummary {
   averageTransactionValue: number;
 }
 
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value.replace(/,/g, '').trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const normalizeLoyaltyMember = (row: Record<string, unknown>): LoyaltyMember => ({
+  LM_ID: toNumber(row.LM_ID ?? row.LmId ?? row.id),
+  CustomerCode: String(row.CustomerCode ?? row.customerCode ?? row.Code ?? ''),
+  CustomerName: String(row.CustomerName ?? row.customerName ?? row.Name ?? 'Unknown Customer'),
+  Branch: String(row.Branch ?? row.branch ?? row.BranchName ?? 'Unknown'),
+  Nationality: String(row.Nationality ?? row.nationality ?? ''),
+  Tier: String(row.Tier ?? row.tier ?? row.MemberTier ?? 'Standard'),
+  PointsEarned: toNumber(row.PointsEarned ?? row.pointsEarned ?? row.EarnedPoints),
+  PointsRedeemed: toNumber(row.PointsRedeemed ?? row.pointsRedeemed ?? row.RedeemedPoints),
+  BalancePoints: toNumber(row.BalancePoints ?? row.balancePoints ?? row.PointsBalance),
+  SalesCount: toNumber(row.SalesCount ?? row.salesCount ?? row.TransactionCount),
+  TotalSales: toNumber(row.TotalSales ?? row.totalSales ?? row.SalesAmount),
+});
+
 /**
  * Fetch loyalty data from the API
  */
@@ -92,7 +115,7 @@ export const fetchLoyaltyData = async (
     throw new Error('No authentication token available');
   }
 
-  const response = await axios.get<LoyaltyMember[]>(
+  const response = await axios.get(
     `${apiUrl}/loyalty`,
     {
       params: {
@@ -105,8 +128,16 @@ export const fetchLoyaltyData = async (
       },
     }
   );
+  const payload = response.data as unknown;
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { Table?: unknown[] })?.Table)
+      ? (payload as { Table: unknown[] }).Table
+      : [];
 
-  return response.data;
+  return rows
+    .filter((row): row is Record<string, unknown> => !!row && typeof row === 'object')
+    .map(normalizeLoyaltyMember);
 };
 
 /**

@@ -232,6 +232,63 @@ export function EnhancedDataTable<T>({
   const activeFiltersCount =
     Object.values(columnFilters).filter((values) => values.length > 0).length + (globalSearch ? 1 : 0);
 
+  const getStatusColorClasses = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    if (['paid', 'received', 'active', 'success', 'completed'].includes(normalized)) {
+      return isDark
+        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+        : 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+    }
+    if (['pending', 'in transit', 'processing', 'open'].includes(normalized)) {
+      return isDark
+        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+        : 'bg-amber-100 text-amber-700 border border-amber-200';
+    }
+    if (['overdue', 'cancelled', 'canceled', 'failed', 'inactive', 'rejected'].includes(normalized)) {
+      return isDark
+        ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+        : 'bg-red-100 text-red-700 border border-red-200';
+    }
+    return null;
+  };
+
+  const renderSemanticValue = (columnKey: string, value: unknown) => {
+    if (typeof value === 'string') {
+      const statusClass = getStatusColorClasses(value);
+      if (statusClass) {
+        return (
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass}`}>
+            {value}
+          </span>
+        );
+      }
+
+      if (value.trim().endsWith('%')) {
+        const parsed = Number.parseFloat(value);
+        if (!Number.isNaN(parsed)) {
+          return (
+            <span className={parsed >= 0 ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-red-600 dark:text-red-400'}>
+              {value}
+            </span>
+          );
+        }
+      }
+    }
+
+    if (typeof value === 'number') {
+      const id = columnKey.toLowerCase();
+      if (/(amount|sales|profit|revenue|income|expense|total|balance|value|change|trend|growth)/.test(id)) {
+        return (
+          <span className={value >= 0 ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-red-600 dark:text-red-400'}>
+            {value}
+          </span>
+        );
+      }
+    }
+
+    return value as React.ReactNode;
+  };
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -309,7 +366,7 @@ export function EnhancedDataTable<T>({
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className={isDark ? 'bg-gray-700/50' : 'bg-gray-50'}>
+            <thead className={isDark ? 'bg-gradient-to-r from-gray-800 to-gray-700/80' : 'bg-gradient-to-r from-slate-50 to-blue-50'}>
               <tr>
                 {columns.map((column) => (
                   <th
@@ -495,8 +552,8 @@ export function EnhancedDataTable<T>({
                     key={rowIndex}
                     className={`border-t ${
                       isDark
-                        ? 'border-gray-700 hover:bg-gray-700/30'
-                        : 'border-gray-100 hover:bg-gray-50'
+                        ? rowIndex % 2 === 0 ? 'border-gray-700 bg-gray-800/30 hover:bg-gray-700/40' : 'border-gray-700 hover:bg-gray-700/30'
+                        : rowIndex % 2 === 0 ? 'border-gray-100 bg-slate-50/60 hover:bg-blue-50/40' : 'border-gray-100 hover:bg-gray-50'
                     } transition-colors`}
                   >
                     {columns.map((column) => {
@@ -512,7 +569,7 @@ export function EnhancedDataTable<T>({
                               : 'text-left'
                           } ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                         >
-                          {column.render ? column.render(value, row) : value}
+                          {column.render ? column.render(value, row) : renderSemanticValue(column.key, value)}
                         </td>
                       );
                     })}

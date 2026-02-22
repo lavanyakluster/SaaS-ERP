@@ -1,11 +1,5 @@
-import { Metadata } from 'next';
-import { SalesTargetDashboard } from '@/components/sales-target/SalesTargetDashboard';
-
-export const metadata: Metadata = {
-  title: 'Sales Target Analysis - SmartBook ERP',
-  description: 'Sales target achievement analysis and branch performance',
-};
+import { redirect } from 'next/navigation';
 
 export default function SalesTargetPage() {
-  return <SalesTargetDashboard />;
+  redirect('/dashboard?tab=sales-target');
 }

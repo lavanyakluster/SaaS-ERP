@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ChevronDown, TrendingUp } from 'lucide-react';
 import { NAVIGATION_MENU } from '@/lib/constants/navigation';
@@ -16,6 +16,7 @@ interface SidebarProps {
 
 const Sidebar = React.memo(function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { theme } = useThemeStore();
   const { activeGradient } = useGradientStore();
   // ✅ All sections closed by default
@@ -84,12 +85,22 @@ const Sidebar = React.memo(function Sidebar({ collapsed, onToggle }: SidebarProp
 
   const isActive = useCallback((href?: string) => {
     if (!href) return false;
-    // Exact match for dashboard sub-routes
-    if (pathname === href) return true;
-    // For /dashboard main route, also match /dashboard/loyalty and /dashboard/sales-target
-    if (href === '/dashboard' && pathname.startsWith('/dashboard')) return false; // Don't highlight Overview for sub-dashboards
-    return false;
-  }, [pathname]);
+
+    const [hrefPath, hrefQuery] = href.split('?');
+    const hrefParams = new URLSearchParams(hrefQuery || '');
+    const hrefTab = hrefParams.get('tab') || 'overview';
+
+    if (hrefPath !== pathname) {
+      return false;
+    }
+
+    if (hrefPath === '/dashboard') {
+      const currentTab = searchParams.get('tab') || 'overview';
+      return currentTab === hrefTab;
+    }
+
+    return true;
+  }, [pathname, searchParams]);
 
   // Memoize gradient button styles
   const gradientButtonStyle = useMemo(() => ({

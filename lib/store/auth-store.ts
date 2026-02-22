@@ -146,6 +146,7 @@ const TOKEN_KEYS = {
   REFRESH: 'sb_refresh_token',
   EXPIRES_IN: 'sb_token_expires_in',
   EXPIRES_AT: 'sb_token_expires_at',
+  USER: 'sb_user',
   SELECTED_ORG: 'sb_selected_organization', // ✅ Persist selected org
   ORG_API_URL: 'sb_organization_api_url', // ✅ NEW: Persist org-specific API URL
 } as const;
@@ -217,6 +218,7 @@ const clearTokensFromSession = () => {
     sessionStorage.removeItem(TOKEN_KEYS.REFRESH);
     sessionStorage.removeItem(TOKEN_KEYS.EXPIRES_IN);
     sessionStorage.removeItem(TOKEN_KEYS.EXPIRES_AT);
+    sessionStorage.removeItem(TOKEN_KEYS.USER);
     sessionStorage.removeItem(TOKEN_KEYS.SELECTED_ORG); // ✅ NEW: Clear selected org
     sessionStorage.removeItem(TOKEN_KEYS.ORG_API_URL); // ✅ NEW: Clear org-specific API URL
   } catch (error) {
@@ -299,6 +301,67 @@ const loadOrgApiUrlFromSession = (): string | null => {
   return null;
 };
 
+/**
+ * Save user profile (including permissions) to sessionStorage
+ */
+const saveUserToSession = (user: User | null) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (user) {
+      sessionStorage.setItem(TOKEN_KEYS.USER, JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem(TOKEN_KEYS.USER);
+    }
+  } catch (error) {
+    console.error('Failed to save user to sessionStorage:', error);
+  }
+};
+
+/**
+ * Load user profile (including permissions) from sessionStorage
+ */
+const loadUserFromSession = (): User | null => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = sessionStorage.getItem(TOKEN_KEYS.USER);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<User>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const resolvedId =
+      typeof parsed.id === 'string' && parsed.id.trim()
+        ? parsed.id.trim()
+        : typeof parsed.userId === 'string' && parsed.userId.trim()
+          ? parsed.userId.trim()
+          : null;
+    if (!resolvedId) return null;
+
+    return {
+      id: resolvedId,
+      userId: typeof parsed.userId === 'string' && parsed.userId.trim() ? parsed.userId : resolvedId,
+      email: typeof parsed.email === 'string' ? parsed.email : '',
+      name: typeof parsed.name === 'string' ? parsed.name : '',
+      role: typeof parsed.role === 'string' ? parsed.role : 'user',
+      permissions: Array.isArray(parsed.permissions) ? parsed.permissions : [],
+      additionalPermissions: Array.isArray(parsed.additionalPermissions) ? parsed.additionalPermissions : [],
+      branches: Array.isArray(parsed.branches) ? parsed.branches : [],
+      backDaysLimit: typeof parsed.backDaysLimit === 'number' ? parsed.backDaysLimit : undefined,
+      timeRestrictionEnabled: typeof parsed.timeRestrictionEnabled === 'boolean' ? parsed.timeRestrictionEnabled : undefined,
+      timeFrom: typeof parsed.timeFrom === 'string' ? parsed.timeFrom : undefined,
+      timeTo: typeof parsed.timeTo === 'string' ? parsed.timeTo : undefined,
+      offDay: typeof parsed.offDay === 'string' ? parsed.offDay : undefined,
+    };
+  } catch (error) {
+    console.error('Failed to load user from sessionStorage:', error);
+    return null;
+  }
+};
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
 // ============================================================================
 // STORE
 // ============================================================================
@@ -322,13 +385,16 @@ export const useAuthStore = createWithEqualityFn<AuthStore>()(
     // User Actions
     setUser: (user) => {
       set({ user });
+      saveUserToSession(user);
       get().updateActivity();
     },
 
     updateUser: (updates) => {
       const currentUser = get().user;
       if (currentUser) {
-        set({ user: { ...currentUser, ...updates } });
+        const updatedUser = { ...currentUser, ...updates };
+        set({ user: updatedUser });
+        saveUserToSession(updatedUser);
         get().updateActivity();
       }
     },
@@ -601,6 +667,7 @@ if (typeof window !== 'undefined') {
   
   // Check if we have tokens in sessionStorage
   const tokens = loadTokensFromSession();
+  const persistedUser = loadUserFromSession();
   
   if (tokens?.accessToken) {
     console.log('🔄 Restoring auth state from sessionStorage...');
@@ -618,23 +685,67 @@ if (typeof window !== 'undefined') {
         const authStatus = (cookieStatus === 'authenticated' || cookieStatus === 'pending') 
           ? cookieStatus 
           : 'authenticated';
-        
-        // Restore state from token
+
+        const tokenId = isNonEmptyString(payload.sub)
+          ? payload.sub.trim()
+          : isNonEmptyString(payload.userId)
+            ? payload.userId.trim()
+            : null;
+        const tokenUserId = isNonEmptyString(payload.userId)
+          ? payload.userId.trim()
+          : isNonEmptyString(payload.sub)
+            ? payload.sub.trim()
+            : null;
+        const tokenEmail = isNonEmptyString(payload.email) ? payload.email.trim() : '';
+        const tokenName = isNonEmptyString(payload.name) ? payload.name.trim() : '';
+        const tokenRole = isNonEmptyString(payload.role) ? payload.role.trim() : 'user';
+        const tokenPermissions = Array.isArray(payload.permissions) ? payload.permissions : [];
+
+        const tokenHasIdentity = !!tokenId || !!tokenUserId || !!tokenEmail;
+        const tokenLooksIncomplete =
+          !tokenHasIdentity && tokenName.length === 0 && tokenPermissions.length === 0;
+
+        const sameUserAsPersisted =
+          !!persistedUser && (
+            (tokenUserId && persistedUser.userId === tokenUserId) ||
+            (tokenId && persistedUser.id === tokenId) ||
+            (tokenEmail && persistedUser.email.toLowerCase() === tokenEmail.toLowerCase())
+          );
+
+        const shouldPreferPersisted = !!persistedUser && (tokenLooksIncomplete || sameUserAsPersisted);
+
+        const restoredUser: User = shouldPreferPersisted
+          ? {
+              ...persistedUser,
+              id: tokenId || persistedUser.id,
+              userId: tokenUserId || persistedUser.userId || persistedUser.id,
+              email: tokenEmail || persistedUser.email,
+              name: tokenName || persistedUser.name,
+              role: tokenRole || persistedUser.role,
+              permissions: tokenPermissions.length > 0 ? tokenPermissions : (persistedUser.permissions || []),
+            }
+          : {
+              id: tokenId || tokenUserId || '',
+              userId: tokenUserId || tokenId || undefined,
+              email: tokenEmail,
+              name: tokenName,
+              role: tokenRole,
+              permissions: tokenPermissions,
+            };
+
+        // Restore state from token/session
         useAuthStore.setState({
           status: authStatus as 'authenticated' | 'pending',
           tokens,
-          user: {
-            id: payload.sub || payload.userId,
-            userId: payload.userId || payload.sub,
-            email: payload.email || '',
-            name: payload.name || '',
-            role: payload.role || 'user',
-            permissions: payload.permissions || [],
-          },
+          user: restoredUser,
           // ✅ Restore organization context from sessionStorage
           selectedOrganization: loadSelectedOrgFromSession(),
           organizationApiUrl: loadOrgApiUrlFromSession(),
         });
+
+        if (isNonEmptyString(restoredUser.id)) {
+          saveUserToSession(restoredUser);
+        }
         
         console.log('✅ Auth state restored from sessionStorage with status:', authStatus);
         

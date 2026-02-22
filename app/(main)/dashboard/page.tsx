@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback, Suspense, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   DollarSign, CreditCard, ShoppingCart, TrendingUp, Receipt, Target, 
   BarChart3, Package, CheckCircle, AlertCircle, Users 
@@ -16,6 +18,10 @@ import {
   useAutoOrganizationSwitch
 } from '@/lib/hooks';
 import { useManualCumulation } from '@/lib/hooks/useCumulation'; // ✅ NEW: Cumulation hook
+import { PROFIT_LOSS_KEYS } from '@/lib/hooks/useProfitLoss';
+import { salesDashboardKeys } from '@/lib/hooks/useSalesDashboard';
+import { loyaltyDashboardKeys } from '@/lib/hooks/useLoyaltyDashboard';
+import { salesTargetKeys } from '@/lib/hooks/useSalesTarget';
 
 // ⚡ PERFORMANCE: Import lightweight components synchronously
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -87,7 +93,24 @@ const SalesTargetDashboard = dynamic(
   }
 );
 
+const DASHBOARD_TABS: DashboardType[] = [
+  'overview',
+  'sales',
+  'account',
+  'item',
+  'sales-kpi',
+  'loyalty',
+  'sales-target',
+];
+
+const isDashboardType = (value: string | null): value is DashboardType =>
+  !!value && DASHBOARD_TABS.includes(value as DashboardType);
+
 export default function DashboardPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { selectedOrganization } = useAuthStore();
@@ -118,7 +141,10 @@ export default function DashboardPage() {
   const year = selectedYear || new Date().getFullYear().toString();
 
   // Dashboard state
-  const [activeDashboard, setActiveDashboard] = useState<DashboardType>('overview');
+  const queryTab = searchParams.get('tab');
+  const [activeDashboard, setActiveDashboard] = useState<DashboardType>(
+    isDashboardType(queryTab) ? queryTab : 'overview'
+  );
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [dateRange, setDateRange] = useState('This Quarter');
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
@@ -126,7 +152,14 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [customFromDate, setCustomFromDate] = useState('');
   const [customToDate, setCustomToDate] = useState('');
-  const [isCumulative, setIsCumulative] = useState(false); // ✅ Account dashboard cumulative state
+  const [isCumulative, setIsCumulative] = useState(false); // ? Account dashboard cumulative state
+
+  useEffect(() => {
+    const nextDashboard = isDashboardType(queryTab) ? queryTab : 'overview';
+    if (nextDashboard !== activeDashboard) {
+      setActiveDashboard(nextDashboard);
+    }
+  }, [queryTab, activeDashboard]);
 
   // Fetch branches
   const { data: branchesData, isLoading: branchesLoading } = useBranches();
@@ -214,14 +247,50 @@ export default function DashboardPage() {
   }, [performCumulation, fromDt, toDt, branchCode, year]);
 
   // Action handlers
-  const handleRefresh = useCallback(() => {
+  const handleDashboardChange = useCallback((dashboard: DashboardType) => {
+    setActiveDashboard(dashboard);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (dashboard === 'overview') {
+      nextParams.delete('tab');
+    } else {
+      nextParams.set('tab', dashboard);
+    }
+
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+  }, [router, pathname, searchParams]);
+
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Trigger actual refresh by invalidating React Query cache
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
-    setTimeout(() => setIsRefreshing(false), 1500);
-  }, []);
+    try {
+      switch (activeDashboard) {
+        case 'overview':
+          await queryClient.invalidateQueries({ queryKey: PROFIT_LOSS_KEYS.all });
+          break;
+        case 'sales':
+          await queryClient.invalidateQueries({ queryKey: salesDashboardKeys.all });
+          break;
+        case 'account':
+          await queryClient.invalidateQueries({ queryKey: ['accounts'] });
+          break;
+        case 'item':
+          await queryClient.invalidateQueries({ queryKey: ['pharmacy-item-dashboard'] });
+          break;
+        case 'sales-kpi':
+          await queryClient.invalidateQueries({ queryKey: ['salesKpi'] });
+          break;
+        case 'loyalty':
+          await queryClient.invalidateQueries({ queryKey: loyaltyDashboardKeys.all });
+          break;
+        case 'sales-target':
+          await queryClient.invalidateQueries({ queryKey: salesTargetKeys.all });
+          break;
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [activeDashboard, queryClient]);
 
   const handleExport = useCallback(() => {}, []);
   
@@ -250,7 +319,7 @@ export default function DashboardPage() {
           customToDate={customToDate}
           onCustomDateChange={handleCustomDateChange}
           activeDashboard={activeDashboard}
-          onDashboardChange={setActiveDashboard}
+          onDashboardChange={handleDashboardChange}
           onExport={handleExport}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
@@ -286,7 +355,7 @@ export default function DashboardPage() {
           customToDate={customToDate}
           onCustomDateChange={handleCustomDateChange}
           activeDashboard={activeDashboard}
-          onDashboardChange={setActiveDashboard}
+          onDashboardChange={handleDashboardChange}
           onExport={handleExport}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
@@ -322,7 +391,7 @@ export default function DashboardPage() {
           customToDate={customToDate}
           onCustomDateChange={handleCustomDateChange}
           activeDashboard={activeDashboard}
-          onDashboardChange={setActiveDashboard}
+          onDashboardChange={handleDashboardChange}
           onExport={handleExport}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
@@ -351,7 +420,7 @@ export default function DashboardPage() {
           customToDate={customToDate}
           onCustomDateChange={handleCustomDateChange}
           activeDashboard={activeDashboard}
-          onDashboardChange={setActiveDashboard}
+          onDashboardChange={handleDashboardChange}
           onExport={handleExport}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
@@ -394,7 +463,7 @@ export default function DashboardPage() {
           customToDate={customToDate}
           onCustomDateChange={handleCustomDateChange}
           activeDashboard={activeDashboard}
-          onDashboardChange={setActiveDashboard}
+          onDashboardChange={handleDashboardChange}
           onExport={handleExport}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
@@ -427,7 +496,7 @@ export default function DashboardPage() {
           customToDate={customToDate}
           onCustomDateChange={handleCustomDateChange}
           activeDashboard={activeDashboard}
-          onDashboardChange={setActiveDashboard}
+          onDashboardChange={handleDashboardChange}
           onExport={handleExport}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
@@ -467,7 +536,7 @@ export default function DashboardPage() {
         customToDate={customToDate}
         onCustomDateChange={handleCustomDateChange}
         activeDashboard={activeDashboard}
-        onDashboardChange={setActiveDashboard}
+        onDashboardChange={handleDashboardChange}
         onExport={handleExport}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
@@ -542,3 +611,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+

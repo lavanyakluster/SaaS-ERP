@@ -1,11 +1,5 @@
-import { Metadata } from 'next';
-import { LoyaltyDashboard } from '@/components/loyalty/LoyaltyDashboard';
-
-export const metadata: Metadata = {
-  title: 'Loyalty Dashboard - SmartBook ERP',
-  description: 'Loyalty program analytics and insights',
-};
+import { redirect } from 'next/navigation';
 
 export default function LoyaltyPage() {
-  return <LoyaltyDashboard />;
+  redirect('/dashboard?tab=loyalty');
 }

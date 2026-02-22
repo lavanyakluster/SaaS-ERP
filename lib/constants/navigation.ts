@@ -52,32 +52,32 @@ export const NAVIGATION_MENU: NavItem[] = [
       {
         label: 'Sales',
         page: 'sales',
-        href: '/dashboard',
+        href: '/dashboard?tab=sales',
       },
       {
         label: 'Account',
         page: 'account',
-        href: '/dashboard',
+        href: '/dashboard?tab=account',
       },
       {
         label: 'Item',
         page: 'item',
-        href: '/dashboard',
+        href: '/dashboard?tab=item',
       },
       {
         label: 'Sales KPI',
         page: 'sales-kpi',
-        href: '/dashboard',
+        href: '/dashboard?tab=sales-kpi',
       },
       {
         label: 'Loyalty',
         page: 'loyalty',
-        href: '/dashboard/loyalty',
+        href: '/dashboard?tab=loyalty',
       },
       {
         label: 'Sales Target',
         page: 'sales-target',
-        href: '/dashboard/sales-target',
+        href: '/dashboard?tab=sales-target',
       },
     ],
   },
@@ -169,8 +169,8 @@ export const QUICK_ACTIONS = [
   { label: 'Purchase Reports', href: '/reports/purchases', icon: ClipboardList, color: '#8B5CF6' },
   { label: 'New Account', href: '/masters/accounts', icon: Users, color: '#F59E0B' },
   { label: 'View Dashboard', href: '/dashboard', icon: TrendingUp, color: '#06B6D4' },
-  { label: 'Loyalty Dashboard', href: '/dashboard/loyalty', icon: Award, color: '#EC4899' },
-  { label: 'Sales Target Analysis', href: '/dashboard/sales-target', icon: Target, color: '#14B8A6' },
+  { label: 'Loyalty Dashboard', href: '/dashboard?tab=loyalty', icon: Award, color: '#EC4899' },
+  { label: 'Sales Target Analysis', href: '/dashboard?tab=sales-target', icon: Target, color: '#14B8A6' },
 ] as const;
 
 /**
@@ -178,8 +178,8 @@ export const QUICK_ACTIONS = [
  */
 export const BREADCRUMB_CONFIG: Record<string, string[]> = {
   '/dashboard': ['Dashboard'],
-  '/dashboard/loyalty': ['Analytics', 'Loyalty Dashboard'],
-  '/dashboard/sales-target': ['Analytics', 'Sales Target Analysis'],
+  '/dashboard/loyalty': ['Dashboard', 'Loyalty'],
+  '/dashboard/sales-target': ['Dashboard', 'Sales Target'],
   '/transactions/receipts': ['Transactions', 'Receipt Voucher'],
   '/transactions/payments': ['Transactions', 'Payment Voucher'],
   '/transactions/contra': ['Transactions', 'Contra Voucher'],

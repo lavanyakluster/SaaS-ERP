@@ -341,6 +341,70 @@ export function DataTable<TData>({
     table.getColumn(columnId)?.setFilterValue(undefined);
   };
 
+  const getStatusColorClasses = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    if (['paid', 'received', 'active', 'success', 'completed'].includes(normalized)) {
+      return isDark
+        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+        : 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+    }
+    if (['pending', 'in transit', 'processing', 'open'].includes(normalized)) {
+      return isDark
+        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+        : 'bg-amber-100 text-amber-700 border border-amber-200';
+    }
+    if (['overdue', 'cancelled', 'canceled', 'failed', 'inactive', 'rejected'].includes(normalized)) {
+      return isDark
+        ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+        : 'bg-red-100 text-red-700 border border-red-200';
+    }
+    return null;
+  };
+
+  const getSemanticTextClass = (columnId: string, value: unknown) => {
+    const id = columnId.toLowerCase();
+    if (typeof value === 'number') {
+      const metricLikeColumn = /(profit|growth|change|trend|margin|variance|amount|sales|revenue|income|expense|balance|total|value)/.test(id);
+      if (metricLikeColumn && value < 0) return 'text-red-600 dark:text-red-400 font-semibold';
+      if (metricLikeColumn && value > 0) return 'text-emerald-600 dark:text-emerald-400 font-semibold';
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      const statusClass = getStatusColorClasses(trimmed);
+      if (statusClass) return statusClass;
+
+      if (trimmed.endsWith('%')) {
+        const parsed = Number.parseFloat(trimmed);
+        if (!Number.isNaN(parsed) && parsed < 0) return 'text-red-600 dark:text-red-400 font-semibold';
+        if (!Number.isNaN(parsed) && parsed > 0) return 'text-emerald-600 dark:text-emerald-400 font-semibold';
+      }
+    }
+
+    return null;
+  };
+
+  const renderSemanticCell = (cell: any) => {
+    const rawValue = cell.getValue();
+    const semanticClass = getSemanticTextClass(cell.column.id, rawValue);
+    const rendered = flexRender(cell.column.columnDef.cell, cell.getContext());
+
+    if (!semanticClass) {
+      return rendered;
+    }
+
+    const isBadge = semanticClass.includes('bg-');
+    if (isBadge && (typeof rawValue === 'string' || typeof rawValue === 'number')) {
+      return (
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${semanticClass}`}>
+          {String(rawValue)}
+        </span>
+      );
+    }
+
+    return <span className={semanticClass}>{rendered}</span>;
+  };
+
   return (
     <div className={`flex flex-col ${className}`}>
       {/* Toolbar */}
@@ -613,10 +677,7 @@ export function DataTable<TData>({
                           right: isPinned === 'right' ? `${cell.column.getAfter('right')}px` : undefined,
                         }}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {renderSemanticCell(cell)}
                       </td>
                     );
                   })}

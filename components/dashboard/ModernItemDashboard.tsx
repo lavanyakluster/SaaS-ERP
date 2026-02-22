@@ -539,17 +539,26 @@ export function ModernItemDashboard({
       accessorKey: 'reorderStatus',
       header: 'Reorder Status',
       cell: ({ getValue }) => {
-        const status = getValue() as string;
-        const colors = {
-          'Low Stock': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
-          'Normal': 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
-          'Overstock': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400',
+        const status = (getValue() as string) || 'N/A';
+        const normalizedStatus = status.trim().toLowerCase();
+        const colorMap: Record<string, string> = {
+          'adequate': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+          'normal': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+          'in stock': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+          'low stock': 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+          'reorder': 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+          'reorder now': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+          'critical': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+          'out of stock': 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+          'overstock': 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
         };
-        const color = colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+        const color =
+          colorMap[normalizedStatus] ||
+          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
         return (
           <div>
             <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${color}`}>
-              {status || 'N/A'}
+              {status}
             </span>
           </div>
         );

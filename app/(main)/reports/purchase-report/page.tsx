@@ -116,6 +116,13 @@ export default function PurchaseReportPage() {
       sortable: true,
       filterable: true,
       filterType: 'text',
+      render: (value) => (
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+          isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+        }`}>
+          {value}
+        </span>
+      ),
     },
     {
       key: 'category',
@@ -124,6 +131,13 @@ export default function PurchaseReportPage() {
       sortable: true,
       filterable: true,
       filterType: 'text',
+      render: (value) => (
+        <span className={`font-medium ${
+          isDark ? 'text-cyan-300' : 'text-cyan-700'
+        }`}>
+          {value}
+        </span>
+      ),
     },
     {
       key: 'amount',
@@ -134,7 +148,7 @@ export default function PurchaseReportPage() {
       filterable: true,
       filterType: 'number',
       render: (value) => (
-        <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <span className={`font-semibold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
           AED {value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       ),
